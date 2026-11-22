@@ -434,10 +434,11 @@ public partial class DesktopPanelWindow : Window
             _expandedHeight = Height;
             _topmostBeforeCollapse = Topmost;
 
-            MinHeight = 60;   // 收起态允许拖拽调整高度
+            MinHeight = 48;   // 收起态允许拖拽调整高度（上下都能拖）
+            MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
             BodyScroller.Visibility = Visibility.Collapsed;
             CollapsedBar.Visibility = Visibility.Visible;
-            Height = Math.Max(60, _settings.PanelCollapsedHeight);
+            Height = Math.Clamp(_settings.PanelCollapsedHeight, 48, Math.Max(320, SystemParameters.WorkArea.Height - 24));
 
             // 收起后置顶，随时能点到（用户也可以再点按钮取消）
             Topmost = true;

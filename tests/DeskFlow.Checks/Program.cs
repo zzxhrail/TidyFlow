@@ -770,6 +770,21 @@ Console.WriteLine("[20.9] Shortcut drops");
     Check("重复添加会跳过", DeskFlow.Infrastructure.Settings.ShortcutRegistry.Add(settings, [lnk], save: false) == 0);
 }
 
+// ---------- 20.10 扫描性能基准（临时） ----------
+if (Environment.GetEnvironmentVariable("DESKFLOW_SCAN_BENCH") == "1")
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var items = DeskFlow.Infrastructure.Scan.FileScanner.Scan(new DeskFlow.Infrastructure.Scan.ScanOptions
+    {
+        Roots = [@"D:\"],
+        Extensions = [".docx", ".pdf", ".xlsx", ".pptx"],
+        MaxResults = 5000,
+        MaxDirectories = 200_000,
+    });
+    sw.Stop();
+    Console.WriteLine($"[SCAN-BENCH] {items.Count} 个文件 / {sw.ElapsedMilliseconds} ms");
+}
+
 // ---------- 21. 内容分类准确率 ----------
 Console.WriteLine("[21] Classifier accuracy");
 {

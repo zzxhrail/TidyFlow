@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace DeskFlow.Infrastructure.Scan;
 
 /// <summary>一条扫描结果。</summary>
@@ -31,13 +29,13 @@ public sealed class ScanOptions
     /// <summary>只保留这个时间之前修改过的文件。</summary>
     public DateTime? ModifiedBefore { get; init; }
 
-    /// <summary>小于这个字节数的文件跳过（默认 1 KB，过滤快捷方式/缩略图这类噪音）。</summary>
+    /// <summary>小于这个字节数的文件跳过（默认 1 KB）。</summary>
     public long MinimumBytes { get; init; } = 1024;
 
     /// <summary>最多返回多少条，防止整盘扫描把内存吃满。</summary>
     public int MaxResults { get; init; } = 5000;
 
-    /// <summary>最多进多少个目录（防止扫到网络盘/异常设备时卡死）。</summary>
+    /// <summary>最多进多少个目录。</summary>
     public int MaxDirectories { get; init; } = 300_000;
 
     /// <summary>额外排除的目录（归档目录、配置目录等）。</summary>
@@ -48,12 +46,12 @@ public sealed class ScanOptions
 public sealed record ScanProgress(int ScannedDirectories, int Matched, string CurrentDirectory);
 
 /// <summary>
-/// 按盘符扫盘：跳过系统目录与程序目录，按扩展名 / 修改时间 / 大小筛选。
-/// 只读遍历，不动任何文件。
+/// 按盘符扫盘：跳过系统目录与程序目录，按扩展名 / 修改时间 / 大小筛选。只读遍历。
+/// 性能要点：先用字符串过滤扩展名再取 FileInfo（省掉绝大多数 stat）；
+/// 枚举用 EnumerationOptions 一次跳过隐藏/系统/重解析点与无权限目录（异常在整盘扫描里很贵）。
 /// </summary>
 public static class FileScanner
 {
-    /// <summary>系统与程序目录：扫盘时永远不进（进去也只有几万个 dll）。</summary>
     private static readonly string[] ExcludedFolderNames =
     [
         "Windows", "Program Files", "Program Files (x86)", "ProgramData", "AppData",
@@ -76,14 +74,32 @@ public static class FileScanner
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var results = new List<ScanItem>();
+        var results = new List<ScanItem>(Math.Min(options.MaxResults, 4096));
         var extensions = new HashSet<string>(
             options.Extensions.Select(static e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant()),
             StringComparer.OrdinalIgnoreCase);
 
-        var excluded = new List<string>(options.ExcludedPaths);
-        excluded.AddRange(options.Roots.Select(root => System.IO.Path.Combine(root, "Windows")));
+        var excludedRoots = options.ExcludedPaths
+            .Where(static e => !string.IsNullOrWhiteSpace(e))
+            .Select(static e => e.TrimEnd('\\'))
+            .ToList();
+        excludedRoots.AddRange(options.Roots.Select(root => System.IO.Path.Combine(root, "Windows").TrimEnd('\\')));
 
+        var directoryOptions = new EnumerationOptions
+        {
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.Hidden | FileAttributes.System,
+            RecurseSubdirectories = false,
+        };
+
+        var fileOptions = new EnumerationOptions
+        {
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+            RecurseSubdirectories = false,
+        };
+
+        var excludedNames = new HashSet<string>(ExcludedFolderNames, StringComparer.OrdinalIgnoreCase);
         var scannedDirectories = 0;
         var stack = new Stack<string>(options.Roots.Where(Directory.Exists));
         var lastReport = DateTime.MinValue;
@@ -93,7 +109,7 @@ public static class FileScanner
             cancellationToken.ThrowIfCancellationRequested();
             var current = stack.Pop();
 
-            if (IsExcluded(current, excluded))
+            if (IsUnderAny(current, excludedRoots))
             {
                 continue;
             }
@@ -104,8 +120,6 @@ public static class FileScanner
                 break;
             }
 
-            // 进度最多每 250ms 报一次：整盘扫描时目录数上万，
-            // 每 40 个报一次会把 UI 线程刷爆（表现就是"点了扫描就卡死"）
             var now = DateTime.UtcNow;
             if ((now - lastReport).TotalMilliseconds >= 250)
             {
@@ -113,133 +127,79 @@ public static class FileScanner
                 progress?.Report(new ScanProgress(scannedDirectories, results.Count, current));
             }
 
-            IEnumerable<string> subdirectories;
-            IEnumerable<string> files;
             try
             {
-                subdirectories = Directory.EnumerateDirectories(current);
-                files = Directory.EnumerateFiles(current);
+                foreach (var file in Directory.EnumerateFiles(current, "*", fileOptions))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (extensions.Count > 0 && !extensions.Contains(System.IO.Path.GetExtension(file)))
+                    {
+                        continue;
+                    }
+
+                    FileInfo info;
+                    try
+                    {
+                        info = new FileInfo(file);
+                        if (!info.Exists || info.Length < options.MinimumBytes)
+                        {
+                            continue;
+                        }
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        continue;
+                    }
+
+                    if (options.ModifiedAfter is { } after && info.LastWriteTime < after)
+                    {
+                        continue;
+                    }
+
+                    if (options.ModifiedBefore is { } before && info.LastWriteTime > before)
+                    {
+                        continue;
+                    }
+
+                    results.Add(new ScanItem(info.FullName, info.Length, info.LastWriteTime));
+                    if (results.Count >= options.MaxResults)
+                    {
+                        break;
+                    }
+                }
+
+                foreach (var directory in Directory.EnumerateDirectories(current, "*", directoryOptions))
+                {
+                    var name = System.IO.Path.GetFileName(directory);
+                    if (excludedNames.Contains(name))
+                    {
+                        continue;
+                    }
+
+                    stack.Push(directory);
+                }
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                continue;
-            }
-
-            foreach (var file in SafeEnumerate(files))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                FileInfo info;
-                try
-                {
-                    info = new FileInfo(file);
-                    if (!info.Exists || info.Length < options.MinimumBytes)
-                    {
-                        continue;
-                    }
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
-                {
-                    continue;
-                }
-
-                if (extensions.Count > 0 && !extensions.Contains(info.Extension))
-                {
-                    continue;
-                }
-
-                if (options.ModifiedAfter is { } after && info.LastWriteTime < after)
-                {
-                    continue;
-                }
-
-                if (options.ModifiedBefore is { } before && info.LastWriteTime > before)
-                {
-                    continue;
-                }
-
-                if ((info.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0)
-                {
-                    continue;
-                }
-
-                results.Add(new ScanItem(info.FullName, info.Length, info.LastWriteTime));
-                if (results.Count >= options.MaxResults)
-                {
-                    break;
-                }
-            }
-
-            foreach (var directory in SafeEnumerate(subdirectories))
-            {
-                var name = System.IO.Path.GetFileName(directory);
-                if (ExcludedFolderNames.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                // 跳过 junction / 符号链接：否则 All Users、Documents and Settings 这类
-                // 重定向会把同一个目录扫很多遍，甚至绕成环
-                try
-                {
-                    if ((new DirectoryInfo(directory).Attributes & FileAttributes.ReparsePoint) != 0)
-                    {
-                        continue;
-                    }
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
-                {
-                    continue;
-                }
-
-                stack.Push(directory);
+                // 无权限 / 设备异常：跳过继续
             }
         }
 
-        return results
-            .OrderByDescending(static r => r.Modified)
-            .ToList();
+        results.Sort(static (a, b) => b.Modified.CompareTo(a.Modified));
+        return results;
     }
 
-    private static bool IsExcluded(string directory, IReadOnlyList<string> excluded)
+    private static bool IsUnderAny(string directory, IReadOnlyList<string> trimmedRoots)
     {
-        foreach (var path in excluded)
+        foreach (var path in trimmedRoots)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                continue;
-            }
-
-            if (directory.StartsWith(path.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            if (directory.StartsWith(path, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
         }
 
         return false;
-    }
-
-    private static IEnumerable<string> SafeEnumerate(IEnumerable<string> source)
-    {
-        using var enumerator = source.GetEnumerator();
-        while (true)
-        {
-            bool moved;
-            try
-            {
-                moved = enumerator.MoveNext();
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-            {
-                yield break;
-            }
-
-            if (!moved)
-            {
-                yield break;
-            }
-
-            yield return enumerator.Current;
-        }
     }
 }

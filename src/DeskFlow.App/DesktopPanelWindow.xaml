@@ -77,11 +77,11 @@
                     <Image DockPanel.Dock="Left" Source="Assets/icon-32.png" Width="26" Height="26"
                            VerticalAlignment="Center" Margin="0,0,10,0" />
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="CollapsedTrayButton" Style="{StaticResource IconButton}"
+                        <Button x:Name="CollapsedTrayButton" Style="{StaticResource CompactIconButton}"
                                 Content="&#xE896;" ToolTip="最小化到系统托盘" Click="Exit_Click" />
-                        <Button x:Name="CollapsedTopmostButton" Style="{StaticResource IconButton}"
+                        <Button x:Name="CollapsedTopmostButton" Style="{StaticResource CompactIconButton}"
                                 Content="&#xE840;" ToolTip="置顶（总在最前）" Click="CollapsedTopmost_Click" />
-                        <Button Style="{StaticResource IconButton}" Content="&#xE922;" ToolTip="展开"
+                        <Button Style="{StaticResource CompactIconButton}" Content="&#xE922;" ToolTip="展开"
                                 Click="ToggleCollapse_Click" />
                     </StackPanel>
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
