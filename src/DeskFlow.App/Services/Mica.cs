@@ -37,6 +37,11 @@ public static class Mica
     /// <summary>给窗口套上云母背景。必须在 SourceInitialized 之后调用。</summary>
     public static bool Apply(Window window, byte tintAlpha = 0xCC)
     {
+        return Apply(window, !ThemeService.IsLight);
+    }
+
+    private static bool Apply(Window window, bool darkMode)
+    {
         try
         {
             var handle = new WindowInteropHelper(window).Handle;
@@ -45,7 +50,7 @@ public static class Mica
                 return false;
             }
 
-            var dark = 1;
+            var dark = ThemeService.IsLight ? 0 : 1;
             DwmSetWindowAttribute(handle, DwmwaUseImmersiveDarkMode, ref dark, sizeof(int));
 
             var rounded = 2;   // DWMWCP_ROUND

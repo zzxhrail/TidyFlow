@@ -36,7 +36,7 @@
         <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="10,8" Margin="0,0,0,10">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left" Text="整批撤销" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,10,0" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,10,0" />
                 <Button DockPanel.Dock="Right" Content="撤销整批" Click="UndoBatch_Click"
                         Style="{StaticResource DangerButton}" Margin="10,0,0,0" />
                 <ComboBox x:Name="BatchBox" Height="30" VerticalContentAlignment="Center" DisplayMemberPath="Display"
@@ -49,7 +49,7 @@
               VirtualizingPanel.VirtualizationMode="Recycling"
               VirtualizingPanel.ScrollUnit="Pixel"
               ScrollViewer.IsDeferredScrollingEnabled="True" SelectionMode="Extended" Background="Transparent"
-                      BorderThickness="0" Foreground="{StaticResource TextPrimaryBrush}">
+                      BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                         <Setter Property="ToolTip" Value="{Binding OriginalDirectory}" />

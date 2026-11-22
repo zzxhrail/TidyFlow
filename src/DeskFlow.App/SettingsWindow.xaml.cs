@@ -29,6 +29,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         SourceInitialized += (_, _) => Services.Mica.Apply(this);
+        Loaded += (_, _) => LoadTheme();
 
         Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
@@ -364,4 +365,43 @@ public partial class SettingsWindow : Window
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void CloseSettings_Click(object sender, RoutedEventArgs e) => Close();
+
+    private bool _themeReady;
+
+    /// <summary>初始化时把下拉框同步到当前设置（避免构造期误触发保存）。</summary>
+    private void LoadTheme()
+    {
+        if (ThemeCombo is null)
+        {
+            return;
+        }
+
+        ThemeCombo.SelectedIndex = Services.ThemeService.Parse(_settings.Theme) switch
+        {
+            Services.ThemeMode.Dark => 1,
+            Services.ThemeMode.Light => 2,
+            _ => 0,
+        };
+
+        _themeReady = true;
+    }
+
+    private void ThemeCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (!_themeReady || ThemeCombo is null)
+        {
+            return;
+        }
+
+        var mode = ThemeCombo.SelectedIndex switch
+        {
+            1 => Services.ThemeMode.Dark,
+            2 => Services.ThemeMode.Light,
+            _ => Services.ThemeMode.System,
+        };
+
+        Services.ThemeService.Apply(mode);
+        _settings.Theme = Services.ThemeService.ToSetting(mode);
+        _settings.Save();
+    }
 }

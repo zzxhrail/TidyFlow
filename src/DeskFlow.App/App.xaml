@@ -21,7 +21,7 @@
 
             <!-- Win11 设置分组标题 -->
             <Style x:Key="SectionHeader" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Margin" Value="2,18,0,8" />
@@ -46,7 +46,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
                                     <Setter TargetName="Bd" Property="BorderBrush" Value="#12FFFFFF" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
@@ -61,7 +61,7 @@
             <!-- 标题栏图标按钮 -->
             <Style TargetType="Button" x:Key="IconButton">
                 <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Width" Value="30" />
                 <Setter Property="Height" Value="30" />
@@ -79,7 +79,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
                                     <Setter Property="Foreground" Value="White" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -90,7 +90,7 @@
 
             <Style TargetType="Button" x:Key="CompactIconButton">
                 <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Width" Value="22" />
                 <Setter Property="Height" Value="22" />
@@ -108,7 +108,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource GlassHoverBrush}" />
                                     <Setter Property="Foreground" Value="White" />
                                 </Trigger>
                             </ControlTemplate.Triggers>

@@ -27,7 +27,7 @@
                     <StackPanel Margin="0,16,0,0" ClipToBounds="True" HorizontalAlignment="Center" Width="{Binding BoxWidth}">
                         <Image Source="{Binding Icon}" HorizontalAlignment="Center"
                                Width="{Binding IconSize}" Height="{Binding IconSize}" />
-                        <TextBlock Text="{Binding TitleText}" Foreground="{StaticResource TextPrimaryBrush}"
+                        <TextBlock Text="{Binding TitleText}" Foreground="{DynamicResource TextPrimaryBrush}"
                                    TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"
                                    HorizontalAlignment="Center"
                                    Width="{Binding BoxWidth}"
@@ -35,7 +35,7 @@
                                    LineHeight="{Binding LineHeight}"
                                    LineStackingStrategy="BlockLineHeight"
                                    MaxHeight="{Binding MaxTitleHeight}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding SubtitleText}" Foreground="{StaticResource TextTertiaryBrush}"
+                        <TextBlock Text="{Binding SubtitleText}" Foreground="{DynamicResource TextTertiaryBrush}"
                                    TextAlignment="Center" Margin="0,3,0,0" TextWrapping="NoWrap"
                                    HorizontalAlignment="Center"
                                    Width="{Binding BoxWidth}"
@@ -59,15 +59,15 @@
                     <TextBlock Text="{Binding Title}" FontSize="10" Margin="0,3,0,0" Width="68"
                                TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding CompactBar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVisibility}}"
-                               Foreground="{StaticResource TextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
             </Button>
         </DataTemplate>
 
     </Window.Resources>
 
-    <Border x:Name="Root" CornerRadius="8" Background="#B8141414"
-            BorderBrush="#1AFFFFFF" BorderThickness="1" Margin="8"
+    <Border x:Name="Root" CornerRadius="8" Background="{DynamicResource WindowBaseBrush}"
+            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" Margin="8"
             MouseLeftButtonDown="Root_MouseDown">
         <!-- 这里故意不加 DropShadowEffect：WPF 的 Effect 会让整个窗口退回软件渲染，
              拖拽缩放和滚动都会明显掉帧（这是"整体卡顿"的主因）。窗口阴影交给 DWM。 -->
@@ -105,13 +105,13 @@
             <!-- 确认提示：操作完成后弹出一下（缩放 + 淡入），1.2 秒后自动消失 -->
             <Border x:Name="ConfirmCard" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                     Margin="0,0,0,96" Padding="14,9" CornerRadius="6" Background="#F02C2C2C"
-                    BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Opacity="0"
+                    BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" Opacity="0"
                     IsHitTestVisible="False" Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock x:Name="ConfirmGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets"
                                FontSize="14" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
                     <TextBlock x:Name="ConfirmText" Margin="8,0,0,0" VerticalAlignment="Center"
-                               FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                               FontSize="12.5" Foreground="{DynamicResource TextPrimaryBrush}" />
                 </StackPanel>
             </Border>
 
@@ -137,9 +137,9 @@
                            VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
 
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="TidyFlow" Foreground="{StaticResource TextPrimaryBrush}"
+                        <TextBlock Text="TidyFlow" Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontSize="20" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextSecondaryBrush}"
+                        <TextBlock Text="{Binding Status}" Foreground="{DynamicResource TextSecondaryBrush}"
                                    FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                     </StackPanel>
 
@@ -170,7 +170,7 @@
                                           ToolTip="勾选 = 发现即自动下载并归档；不勾 = 只进待接收列表">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Name}" FontSize="11.5" />
-                                        <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextTertiaryBrush}"
+                                        <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource TextTertiaryBrush}"
                                                    FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </CheckBox>
@@ -228,7 +228,7 @@
                                             <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
                                                        FontSize="12.5" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Grid.Column="2" Text="{Binding Badge}" FontFamily="Segoe MDL2 Assets"
-                                                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                                                       FontSize="10" Foreground="{DynamicResource TextTertiaryBrush}"
                                                        VerticalAlignment="Center" />
                                         </Grid>
                                     </DataTemplate>
@@ -330,7 +330,7 @@
                                 <ItemsControl ItemsSource="{Binding BrowseItems}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#0AFFFFFF" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
+                                            <Border Background="{DynamicResource CardSurfaceBrush}" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
                                                     MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
                                                             MouseEnter="BrowseRow_MouseEnter" MouseLeave="BrowseRow_MouseLeave"
                                                     Tag="{Binding}" Cursor="Hand">
@@ -369,7 +369,7 @@
 
                                 <!-- 移动模式：右侧显示目标分类 + 该分类已有文件预览 -->
                                 <Border Grid.Column="1" Width="360" Margin="12,0,0,0" Padding="12"
-                                        CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1"
+                                        CornerRadius="8" Background="#0DFFFFFF" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1"
                                         Visibility="{Binding IsMoveModeVisible, Converter={StaticResource BoolToVisibility}}">
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Top">
@@ -415,7 +415,7 @@
                     </ScrollViewer>
                 </Grid>
 
-                <Border Grid.Row="4" CornerRadius="8" Background="#0AFFFFFF" Padding="14,10" Margin="0,14,0,0">
+                <Border Grid.Row="4" CornerRadius="8" Background="{DynamicResource CardSurfaceBrush}" Padding="14,10" Margin="0,14,0,0">
                     <TextBlock Text="{Binding LogText}" Style="{StaticResource Muted}" TextWrapping="Wrap" />
                 </Border>
             </Grid>

@@ -320,6 +320,8 @@ public partial class App : Application
             Panel.StartWatching();
             // 启动补扫：这段时间识别到的都是历史文件，不弹系统通知
             Panel.SuppressNotifications = true;
+            ThemeService.Initialize(ThemeService.Parse(Settings.Theme));
+
             // 调试用：DESKFLOW_OPEN_SETTINGS=1 启动即打开设置页（截图/回归用）
             if (Environment.GetEnvironmentVariable("DESKFLOW_OPEN_SETTINGS") == "1")
             {

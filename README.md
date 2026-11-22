@@ -1026,3 +1026,20 @@ DwmExtendFrameIntoClientArea(hwnd, -1,-1,-1,-1);             // 边框延伸进�
 窗口改成 `WindowStyle=None` + `WindowChrome` 自绘（可拖、可缩放、圆角 8），并沿用云母底。
 
 调试用：`DESKFLOW_OPEN_SETTINGS=1` 启动即打开设置页（截图/回归用）。
+
+
+## 0.9.26：应用主题（深色 / 浅色 / 跟随系统）
+
+![浅色主题](docs/screenshot-theme-light.png)
+
+设置 → **外观** → 应用主题，三个选项：
+
+| 选项 | 行为 |
+| --- | --- |
+| 跟随系统 | 读 Windows `AppsUseLightTheme`，系统切浅色就变浅色 |
+| 深色 | 固定深色（原样式） |
+| 浅色 | 固定浅色 |
+
+实现方式：主题画刷全部改成 `DynamicResource`，切换时替换 `Application.Resources` 里的画刷实例 → **已经打开的窗口立刻变色**，不用重启。云母（Mica）的深色开关也跟着主题走。
+
+保存键：`ui.theme` = `System` / `Dark` / `Light`。
