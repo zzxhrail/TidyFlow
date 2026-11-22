@@ -122,3 +122,17 @@ IncomingWatcher.ScanOnce()       每 2s；文件大小连续两轮相同才上�
 3. 同名判重是"长度 + 首 1MB 哈希"，判非同则改名 `name (2).ext`，绝不覆盖已有文件。
 4. 索引写失败只影响历史展示，不影响归档本身（先落盘后记账）。
 5. 面板中所有跨线程更新经 `Dispatcher.BeginInvoke`，不在后台线程碰 UI 集合。
+
+## 4. 面板窗口与命中（v0.4）
+
+```
+DesktopPanelWindow (WndProc hook, WM_NCHITTEST)
+  → DeskFlow.Core.Shell.PanelHitTest.Hit(x, y, w, h, pinned)
+      edge 14px        → 四边四角，HTLEFT/HTBOTTOMRIGHT...
+      caption 区域      → HTCAPTION（原生拖动），顶住时降级为 HTCLIENT
+      其余              → HTCLIENT（按钮/格子正常点击）
+```
+
+- 命中计算放在 Core 而不是窗口里：纯函数、可单测（9 个用例），窗口只做 HT 码映射。
+- 拖动用原生 HTCAPTION 而不是 `DragMove()`：贴边吸附、高 DPI 不抖、不吞点击。
+- 顶住（`panel.pinned`）= 关掉 caption 判定，只保留边角缩放；状态持久化，重启保持。

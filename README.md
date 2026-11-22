@@ -34,6 +34,17 @@
 > 文字不会出现"半个字"：格子按当前宽度算好字数预算（中文按全角、ASCII 按 0.56）再截断加省略号，
 > 换 DPI、换字体都不会错位；完整名字在鼠标悬停提示里。
 
+### 拖动与「顶住」
+
+![顶住状态](docs/screenshot-panel-pinned.png)
+
+- **拖动**：按住标题栏拖动即可移动，走 Windows 原生 `HTCAPTION`，能贴边、不会抖；双击标题栏不会最大化（已吞掉该消息）。
+- **顶住**：标题栏右侧第一个按钮（📌）点一下锁死位置，图标变成琥珀色锁 🔒，再点解除。状态存在 `settings.json` 的 `panel.pinned`，下次启动保持。
+- **互不干扰**：贴边 14px 内是缩放，标题栏右侧 148px 留给按钮，所以点按钮不会被当成拖窗口；顶住只锁"移动"，拉边角缩放照常可用。
+
+命中规则是一段纯函数（`DeskFlow.Core/Shell/PanelHitTest.cs`），有 9 个自检用例守着：
+标题栏 → 可拖、顶住 → 不可拖、按钮区 → 放行点击、四角四边 → 缩放、正文 → 放行点击。
+
 ---
 
 ## 二、快速开始
@@ -116,11 +127,11 @@ DeskFlow.Core             Models · Categorization(类别目录) · Abstractions
 
 ```powershell
 dotnet build DeskFlow.sln
-dotnet run --project tests\DeskFlow.Checks      # 56 项零依赖自检
+dotnet run --project tests\DeskFlow.Checks      # 65 项零依赖自检
 powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 59 MB，自包含）
 ```
 
-自检覆盖：类别解析与同名并集、归档落盘/判重/改名/移动、监听「写完才报」与去重、索引持久化、设置读写，以及原有批处理链路。
+自检覆盖：类别解析与同名并集、归档落盘/判重/改名/移动、监听「写完才报」与去重、索引持久化、设置读写、面板命中（拖动/缩放/顶住），以及原有批处理链路。
 
 ---
 
