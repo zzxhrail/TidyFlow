@@ -44,9 +44,8 @@
     <Border x:Name="Root" CornerRadius="8" Background="{StaticResource PanelTint}"
             BorderBrush="#1AFFFFFF" BorderThickness="1" Margin="8"
             MouseLeftButtonDown="Root_MouseDown">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.28" Color="#000000" />
-        </Border.Effect>
+        <!-- 这里故意不加 DropShadowEffect：WPF 的 Effect 会让整个窗口退回软件渲染，
+             拖拽缩放和滚动都会明显掉帧（这是"整体卡顿"的主因）。窗口阴影交给 DWM。 -->
 
         <Grid>
             <!-- 面板主体：固定高度分区，导航列随窗口高度伸展 -->

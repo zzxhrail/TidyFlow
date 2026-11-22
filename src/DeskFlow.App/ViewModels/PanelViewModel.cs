@@ -195,12 +195,11 @@ public sealed class PanelViewModel : ObservableObject
         OnPropertyChanged(nameof(TileLineHeight));
         OnPropertyChanged(nameof(TitleMaxHeight));
 
-        // 尺寸变了就按新尺寸重建四个列表（几十个格子，成本可忽略，行为最可预测）
-        Diagnostics.Log($"width={panelWidth:F1} usable={usable:F1} columns={columns} tile={tileWidth:F1} icon={iconSize:F1} height={tileHeight:F1} scale={scale:F2}");
-        BuildShortcuts();
-        BuildPending();
-        BuildRecent();
-        BuildCategories();
+        // 原位重排：只改已有格子的尺寸/文字，列表本身不动
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var relaid = RelayoutTiles();
+        stopwatch.Stop();
+        Diagnostics.Log($"width={panelWidth:F1} usable={usable:F1} columns={columns} tile={tileWidth:F1} icon={iconSize:F1} height={tileHeight:F1} scale={scale:F2} relayout={relaid} cost={stopwatch.Elapsed.TotalMilliseconds:F2}ms");
     }
 
     /// <summary>左侧导航的一条（分组标题或可点击条目）。</summary>
@@ -807,8 +806,9 @@ public sealed class PanelViewModel : ObservableObject
     }
 
     /// <summary>按当前密度参数造一个格子，四个列表共用，避免每处都手写尺寸。</summary>
-    private PanelTile MakeTile(TileKind kind, string title, string subtitle, System.Windows.Media.ImageSource? icon, string? path = null, string? recordId = null) =>
-        new()
+    private PanelTile MakeTile(TileKind kind, string title, string subtitle, System.Windows.Media.ImageSource? icon, string? path = null, string? recordId = null)
+    {
+        var tile = new PanelTile
         {
             Title = title,
             Subtitle = subtitle,
@@ -816,17 +816,39 @@ public sealed class PanelViewModel : ObservableObject
             Path = path,
             Kind = kind,
             RecordId = recordId,
-            BoxWidth = TileWidth,
-            BoxHeight = TileHeight,
-            IconSize = IconSize,
-            TitleFontSize = TileFontSize,
-            SubtitleFontSize = SubtitleFontSize,
-            LineHeight = _lineHeight,
-            MaxTitleHeight = _maxTitleHeight,
-            ShowSubtitle = ShowSubtitle && !string.IsNullOrEmpty(subtitle),
-            TitleText = FitFileName(title, TileWidth - 4, TileFontSize, 2),
-            SubtitleText = FitText(subtitle, TileWidth - 4, SubtitleFontSize, 1),
         };
+
+        ApplyGeometry(tile);
+        return tile;
+    }
+
+    /// <summary>把当前密度写进一个格子里（新建和重排共用这一段）。</summary>
+    private void ApplyGeometry(PanelTile tile)
+    {
+        tile.BoxWidth = TileWidth;
+        tile.BoxHeight = TileHeight;
+        tile.IconSize = IconSize;
+        tile.TitleFontSize = TileFontSize;
+        tile.SubtitleFontSize = SubtitleFontSize;
+        tile.LineHeight = _lineHeight;
+        tile.MaxTitleHeight = _maxTitleHeight;
+        tile.ShowSubtitle = ShowSubtitle && !string.IsNullOrEmpty(tile.Subtitle);
+        tile.TitleText = FitFileName(tile.Title, TileWidth - 4, TileFontSize, 2);
+        tile.SubtitleText = FitText(tile.Subtitle, TileWidth - 4, SubtitleFontSize, 1);
+    }
+
+    /// <summary>宽度变了：原位改所有格子的尺寸与文字，不重建列表（重建会触发一堆集合变更）。</summary>
+    private int RelayoutTiles()
+    {
+        var count = 0;
+        foreach (var tile in Shortcuts.Concat(PendingFiles).Concat(RecentFiles).Concat(Categories))
+        {
+            ApplyGeometry(tile);
+            count++;
+        }
+
+        return count;
+    }
 
     /// <summary>
     /// 按格子宽度裁字：中日韩字符按 1 个字号宽计，ASCII 按 0.56 个字号宽计，

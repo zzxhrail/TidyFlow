@@ -70,6 +70,7 @@ public partial class DesktopPanelWindow : Window
 
         Loaded += OnLoaded;
         SizeChanged += OnSizeChanged;
+        _resizeTimer.Tick += OnResizeSettled;
         LocationChanged += OnLocationChanged;
     }
 
@@ -160,6 +161,7 @@ public partial class DesktopPanelWindow : Window
         _expandedHeight = Height;
         _viewModel.ApplyPanelWidth(Width);
         ApplyPinVisual();
+        Services.Diagnostics.Log($"render tier={System.Windows.Media.RenderCapability.Tier >> 16} (2=硬件加速)");
 
         var left = _settings.PanelX >= 0 ? _settings.PanelX : area.Right - Width - 24;
         var top = _settings.PanelY >= 0 ? _settings.PanelY : area.Top + 60;
@@ -168,6 +170,15 @@ public partial class DesktopPanelWindow : Window
         Top = Math.Clamp(top, area.Top, Math.Max(area.Top, area.Bottom - Height));
     }
 
+    private readonly System.Windows.Threading.DispatcherTimer _resizeTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(90),
+    };
+
+    /// <summary>
+    /// 拖拽缩放时 SizeChanged 每帧都会来，直接重排会让画面掉帧。
+    /// 用 90ms 防抖：松手（或停顿）后再统一重排一次。
+    /// </summary>
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (WindowState != WindowState.Normal)
@@ -175,13 +186,26 @@ public partial class DesktopPanelWindow : Window
             return;
         }
 
-        _viewModel.ApplyPanelWidth(ActualWidth);
         if (!_collapsed)
         {
             _expandedHeight = ActualHeight;
         }
 
+        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) < 2)
+        {
+            ScheduleSave();
+            return;
+        }
+
+        _resizeTimer.Stop();
+        _resizeTimer.Start();
         ScheduleSave();
+    }
+
+    private void OnResizeSettled(object? sender, EventArgs e)
+    {
+        _resizeTimer.Stop();
+        _viewModel.ApplyPanelWidth(ActualWidth);
     }
 
     private void OnLocationChanged(object? sender, EventArgs e)

@@ -72,7 +72,10 @@
 
         <!-- 结果 -->
         <Border Grid.Row="3" Style="{StaticResource Card}" Padding="6">
-            <ListView x:Name="ResultList" SelectionMode="Extended" Background="Transparent" BorderThickness="0">
+            <ListView x:Name="ResultList" VirtualizingPanel.IsVirtualizing="True"
+              VirtualizingPanel.VirtualizationMode="Recycling"
+              VirtualizingPanel.ScrollUnit="Pixel"
+              ScrollViewer.IsDeferredScrollingEnabled="True" SelectionMode="Extended" Background="Transparent" BorderThickness="0">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                         <Setter Property="ToolTip" Value="{Binding Path}" />
