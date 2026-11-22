@@ -113,18 +113,10 @@ public partial class DesktopPanelWindow : Window
             return;
         }
 
-        if (WindowState == WindowState.Normal && _heightBeforeMinimize > 0)
+        if (WindowState == WindowState.Normal && IsVisible && _heightBeforeMinimize > 0)
         {
             Height = Math.Clamp(_heightBeforeMinimize, MinHeight, _maxPanelHeight);
-            var width = ActualWidth;
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                _viewModel.ApplyPanelWidth(width);
-                InvalidateVisual();
-                Root.InvalidateVisual();
-                BodyScroller.InvalidateMeasure();
-                UpdateLayout();
-            }), DispatcherPriority.Loaded);
+            ForceRepaint();
         }
     }
 
@@ -653,6 +645,9 @@ public partial class DesktopPanelWindow : Window
     public void HideToTray()
     {
         PersistGeometry();
+        _heightBeforeMinimize = Height > 100 ? Height : _heightBeforeMinimize;
+
+        ShowInTaskbar = false;
         Hide();
         Services.Diagnostics.Log($"hidden to tray, IsVisible={IsVisible}");
 
@@ -666,6 +661,8 @@ public partial class DesktopPanelWindow : Window
     /// <summary>从托盘回到桌面：还原 + 激活。</summary>
     public void ShowFromTray()
     {
+        ShowInTaskbar = true;
+
         if (!IsVisible)
         {
             Show();
@@ -676,8 +673,76 @@ public partial class DesktopPanelWindow : Window
             WindowState = WindowState.Normal;
         }
 
+        if (_heightBeforeMinimize > 0)
+        {
+            Height = Math.Clamp(_heightBeforeMinimize, MinHeight, _maxPanelHeight);
+        }
+
         Activate();
         Topmost = true;
         Topmost = false;
+        ForceRepaint();
     }
+
+    /// <summary>
+    /// 最小化 / 托盘恢复后强制重建画面：WPF 在这种情况下不会自动重绘，
+    /// 只靠 InvalidateVisual 不够，得把宽度挪 1px 再挪回来触发重新布局与合成。
+    /// </summary>
+    /// <summary>
+    /// 最小化→还原之后 WPF 经常不再画内容（留一块空白卡片）。
+    /// 可靠做法：把窗口在同一位置"藏一下再显示"，让 DWM 重建渲染面；
+    /// 只调 InvalidateVisual / RedrawWindow 在还原场景里常常无效。
+    /// </summary>
+    private void ForceRepaint()
+    {
+        if (WindowState != WindowState.Normal || !IsVisible)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (WindowState != WindowState.Normal)
+            {
+                return;
+            }
+
+            var left = Left;
+            var top = Top;
+            var width = Width;
+            var height = Height;
+
+            Hide();
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                Left = left;
+                Top = top;
+                Width = width;
+                Height = height;
+                Show();
+                Activate();
+
+                _viewModel.ApplyPanelWidth(width);
+                UpdateLayout();
+                InvalidateVisual();
+                Root.InvalidateVisual();
+                Services.WindowEffects.Apply(this, Services.BackdropKind.Mica);
+
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    RedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero, RdwInvalidate | RdwErase | RdwAllChildren | RdwUpdateNow | RdwFrame);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private const uint RdwInvalidate = 0x0001;
+    private const uint RdwErase = 0x0004;
+    private const uint RdwFrame = 0x0400;
+    private const uint RdwAllChildren = 0x0080;
+    private const uint RdwUpdateNow = 0x0100;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hwnd, IntPtr updateRect, IntPtr updateRgn, uint flags);
 }
