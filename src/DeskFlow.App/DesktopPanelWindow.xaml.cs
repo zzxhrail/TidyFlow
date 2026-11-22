@@ -71,6 +71,15 @@ public partial class DesktopPanelWindow : Window
         Loaded += OnLoaded;
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
 
+        // 待接收列表变化时刷新「共 N 个，已选 M 个」与按钮状态
+        _viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(PanelViewModel.PendingCount) or nameof(PanelViewModel.HasPending))
+            {
+                UpdatePendingSummary();
+            }
+        };
+
         SizeChanged += OnSizeChanged;
         _resizeTimer.Tick += OnResizeSettled;
 
@@ -540,6 +549,55 @@ public partial class DesktopPanelWindow : Window
 
     private PanelTile? _hoverTile;
     private BrowseItem? _hoverBrowseItem;
+
+    /// <summary>勾选框：只切选中状态，不要顺带触发瓦片的"打开预览"。</summary>
+    private void TilePicker_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        UpdatePendingSummary();
+    }
+
+    private void PendingSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        var select = !_viewModel.PendingFiles.All(static t => t.IsSelected);
+        foreach (var tile in _viewModel.PendingFiles)
+        {
+            tile.IsSelected = select;
+        }
+
+        UpdatePendingSummary();
+    }
+
+    private async void PendingAcceptSelected_Click(object sender, RoutedEventArgs e)
+    {
+        var count = await _viewModel.AcceptSelectedPendingAsync();
+        if (count == 0)
+        {
+            PendingSummary.Text = "先勾选要接收的文件";
+        }
+
+        UpdatePendingSummary();
+    }
+
+    private void PendingIgnoreAll_Click(object sender, RoutedEventArgs e)
+    {
+        var count = _viewModel.IgnoreAllPending();
+        UpdatePendingSummary(count == 0 ? "暂无待接收文件" : null);
+    }
+
+    private void UpdatePendingSummary(string? hint = null)
+    {
+        if (PendingSummary is null)
+        {
+            return;
+        }
+
+        var selected = _viewModel.PendingSelectedCount;
+        var total = _viewModel.PendingFiles.Count;
+        PendingSummary.Text = hint ?? (total == 0 ? string.Empty : $"共 {total} 个，已选 {selected} 个");
+        PendingSelectAllButton.Content = total > 0 && _viewModel.PendingFiles.All(static t => t.IsSelected) ? "取消全选" : "全选";
+        PendingAcceptButton.IsEnabled = selected > 0;
+    }
 
     private void Tile_MouseEnter(object sender, MouseEventArgs e) =>
         _hoverTile = (sender as FrameworkElement)?.Tag as PanelTile;

@@ -21,7 +21,11 @@
                     MouseEnter="Tile_MouseEnter" MouseLeave="Tile_MouseLeave"
                     HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
-                <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}"
+                <Grid Width="{Binding BoxWidth}" Height="{Binding BoxHeight}" HorizontalAlignment="Left">
+                    <CheckBox Style="{StaticResource TilePicker}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}"
+                              Click="TilePicker_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0" />
+                <StackPanel Margin="0,15,0,0" ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}"
                             HorizontalAlignment="Left">
                     <Image Source="{Binding Icon}" HorizontalAlignment="Left"
                            Width="{Binding IconSize}" Height="{Binding IconSize}" />
@@ -38,6 +42,7 @@
                                FontSize="{Binding SubtitleFontSize}"
                                Visibility="{Binding ShowSubtitle, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
+                </Grid>
             </Button>
         </DataTemplate>
     </Window.Resources>
@@ -114,8 +119,15 @@
                 <!-- 待接收 -->
                 <StackPanel Grid.Row="2" Margin="0,14,0,0"
                             Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="待接收" Style="{StaticResource SectionHeader}"
-                               Foreground="{StaticResource WarningBrush}" Margin="2,0,0,8" />
+                    <DockPanel Margin="2,0,0,8">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="PendingSelectAllButton" Content="全选" Click="PendingSelectAll_Click" Margin="0,0,6,0" />
+                            <Button x:Name="PendingAcceptButton" Content="接收选中" Click="PendingAcceptSelected_Click" Style="{StaticResource AccentButton}" Margin="0,0,6,0" />
+                            <Button Content="一键忽略" Click="PendingIgnoreAll_Click" />
+                        </StackPanel>
+                        <TextBlock Text="待接收" Style="{StaticResource SectionHeader}" VerticalAlignment="Center" Margin="0" />
+                        <TextBlock x:Name="PendingSummary" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                    </DockPanel>
                     <ItemsControl ItemsSource="{Binding PendingFiles}" ItemTemplate="{StaticResource TileTemplate}"
                                   ItemsPanel="{StaticResource TilePanel}" />
                 </StackPanel>

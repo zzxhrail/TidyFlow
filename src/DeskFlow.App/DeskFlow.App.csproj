@@ -13,9 +13,9 @@
     <RootNamespace>DeskFlow.App</RootNamespace>
     <Product>TidyFlow</Product>
     <AssemblyTitle>TidyFlow 鏂囦欢绠″</AssemblyTitle>
-    <Version>0.8.8</Version>
-    <FileVersion>0.8.8.0</FileVersion>
-    <AssemblyVersion>0.8.8.0</AssemblyVersion>
+    <Version>0.8.9</Version>
+    <FileVersion>0.8.9.0</FileVersion>
+    <AssemblyVersion>0.8.9.0</AssemblyVersion>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
@@ -43,6 +43,7 @@
     <Resource Include="Assets\tidyflow.ico" />
   </ItemGroup>
 </Project>
+
 
 
 

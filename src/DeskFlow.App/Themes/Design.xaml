@@ -461,6 +461,35 @@
         </Setter>
     </Style>
 
+    <!-- ============ 瓦片角上的多选框（待接收用） ============ -->
+    <Style x:Key="TilePicker" TargetType="CheckBox">
+        <Setter Property="Width" Value="18" />
+        <Setter Property="Height" Value="18" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Border x:Name="Box" Width="16" Height="16" CornerRadius="4"
+                            Background="#8C000000" BorderBrush="#66FFFFFF" BorderThickness="1">
+                        <Path x:Name="Tick" Data="M 3,8 L 6.5,11.5 L 13,4" Stroke="White" StrokeThickness="2"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ============ 进度条（Win11：圆角 + 强调色；不确定态走跑马灯） ============ -->
     <Style x:Key="FluentProgress" TargetType="ProgressBar">
         <Setter Property="Height" Value="6" />

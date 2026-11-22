@@ -634,6 +634,48 @@ public sealed class PanelViewModel : ObservableObject
         BuildCategories();
     }
 
+    /// <summary>待接收里已勾选的文件数量。</summary>
+    public int PendingSelectedCount => PendingFiles.Count(static t => t.IsSelected);
+
+    /// <summary>批量接收：挨个走和单条相同的归档流程。</summary>
+    public async Task<int> AcceptSelectedPendingAsync()
+    {
+        var selected = PendingFiles.Where(static t => t.IsSelected).ToList();
+        if (selected.Count == 0)
+        {
+            return 0;
+        }
+
+        var done = 0;
+        foreach (var tile in selected)
+        {
+            await AcceptPendingAsync(tile);
+            done++;
+        }
+
+        Log($"批量接收 {done} 个文件");
+        return done;
+    }
+
+    /// <summary>一键忽略：把当前所有待接收一次性标记为忽略。</summary>
+    public int IgnoreAllPending()
+    {
+        var pending = _index.Pending().ToList();
+        foreach (var record in pending)
+        {
+            record.Status = ArchiveStatus.Ignored;
+            _index.Upsert(record);
+        }
+
+        BuildPending();
+        if (pending.Count > 0)
+        {
+            Log($"已忽略 {pending.Count} 个待接收文件");
+        }
+
+        return pending.Count;
+    }
+
     public void IgnorePending(PanelTile tile)
     {
         var record = _index.All.FirstOrDefault(r => r.Id == tile.RecordId);

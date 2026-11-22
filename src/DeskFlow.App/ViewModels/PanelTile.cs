@@ -32,6 +32,7 @@ public sealed class PanelTile : INotifyPropertyChanged
     private double _lineHeight = 13;
     private double _maxTitleHeight = 27;
     private bool _showSubtitle = true;
+    private bool _isSelected;
     private string _titleText = string.Empty;
     private string _subtitleText = string.Empty;
 
@@ -110,6 +111,16 @@ public sealed class PanelTile : INotifyPropertyChanged
         get => _subtitleText;
         set => Set(ref _subtitleText, value);
     }
+
+    /// <summary>待接收列表里的多选状态（只有待接收格子用）。</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => Set(ref _isSelected, value);
+    }
+
+    /// <summary>是否待接收：模板据此显示左上角勾选框。</summary>
+    public bool IsPending => Kind == TileKind.Pending;
 
     /// <summary>悬停显示完整信息：文件名 + 路径。</summary>
     public string ToolTip => string.IsNullOrWhiteSpace(Path) ? $"{Title}\n{Subtitle}" : $"{Title}\n{Path}";
