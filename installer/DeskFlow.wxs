@@ -7,7 +7,7 @@
 
   <Package Name="DeskFlow"
            Manufacturer="DeskFlow"
-           Version="0.5.1"
+           Version="0.5.2"
            UpgradeCode="8F1D0A5C-4C2E-4E9B-9A6E-2B7C3F5D8A10"
            Scope="perUser"
            Compressed="yes"

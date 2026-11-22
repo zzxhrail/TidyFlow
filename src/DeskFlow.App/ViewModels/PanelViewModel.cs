@@ -244,6 +244,8 @@ public sealed class PanelViewModel : ObservableObject
                     }
 
                     HandleDetected(new IncomingFile(file, target.Source, DateTimeOffset.Now));
+                    // 补扫过的文件要让监听器也记住，否则下一轮轮询会再上报一次（重复归档）
+                    _watcher?.MarkKnown(file);
                     imported++;
                 }
             }
@@ -399,6 +401,12 @@ public sealed class PanelViewModel : ObservableObject
             return;
         }
 
+        // 同一条路径只处理一次：启动补扫与轮询可能同时看到同一个文件
+        if (_index.KnowsSourcePath(incoming.FullPath))
+        {
+            return;
+        }
+
         var info = new FileInfo(incoming.FullPath);
         var category = _categories.Resolve(incoming.FullPath);
         var record = new FileRecord
@@ -518,7 +526,7 @@ public sealed class PanelViewModel : ObservableObject
             var detail = detected > 0
                 ? (detected == 1 ? "已检测到目录" : $"已检测到 {detected} 个目录")
                 : matched.Count > 0
-                    ? "等待首次接收"
+                    ? "已装好，等第一个文件落盘"   // 客户端装了就一定会有，只是目录还没被创建
                     : "未检测到（可在设置里手动添加）";
 
             Sources.Add(new SourceToggle(source.DisplayName(), detail, source.ToString(), matched.Count > 0, _settings.IsAutoDownload(source)));
