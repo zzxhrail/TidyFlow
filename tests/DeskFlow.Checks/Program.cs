@@ -2,6 +2,7 @@ using System.Text;
 using DeskFlow.Core.Abstractions;
 using DeskFlow.Core.Categorization;
 using DeskFlow.Core.Models;
+using DeskFlow.Core.Shell;
 using DeskFlow.Core.Runtime;
 using DeskFlow.Infrastructure;
 using DeskFlow.Infrastructure.Archive;
@@ -332,6 +333,23 @@ Console.WriteLine("[11] ArchiveSettings");
     settings.Shortcuts.Add(new DeskFlow.Infrastructure.Settings.ShortcutItem { Name = "计算器", Path = @"C:\Windows\System32\calc.exe" });
     settings.Save();
     Check("快捷方式持久化", new ArchiveSettings(proxy).Shortcuts.Any(s => s.Name == "计算器"));
+}
+
+
+// ---------- 12. 面板命中（拖动/缩放/顶住） ----------
+Console.WriteLine("[12] PanelHitTest");
+{
+    const double w = 376, h = 640;
+    Check("标题栏中部 → 可拖动", PanelHitTest.Hit(100, 30, w, h, pinned: false) == PanelHitArea.Caption);
+    Check("顶住后标题栏不再可拖", PanelHitTest.Hit(100, 30, w, h, pinned: true) == PanelHitArea.None);
+    Check("右侧按钮区留给控件", PanelHitTest.Hit(300, 30, w, h, pinned: false) == PanelHitArea.None,
+        PanelHitTest.Hit(300, 30, w, h, false).ToString());
+    Check("左上角 → 缩放", PanelHitTest.Hit(4, 4, w, h, false) == PanelHitArea.TopLeft);
+    Check("右下角 → 缩放", PanelHitTest.Hit(w - 4, h - 4, w, h, false) == PanelHitArea.BottomRight);
+    Check("右边中点 → 横向缩放", PanelHitTest.Hit(w - 4, 300, w, h, false) == PanelHitArea.Right);
+    Check("正文区域不拦截点击", PanelHitTest.Hit(200, 300, w, h, false) == PanelHitArea.None);
+    Check("顶住仍能拉边角", PanelHitTest.Hit(w - 4, h - 4, w, h, pinned: true) == PanelHitArea.BottomRight);
+    Check("零尺寸不崩", PanelHitTest.Hit(10, 10, 0, 0, false) == PanelHitArea.None);
 }
 
 Console.WriteLine();

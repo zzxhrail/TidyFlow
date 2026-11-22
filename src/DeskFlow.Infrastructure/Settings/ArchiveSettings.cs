@@ -33,6 +33,7 @@ public sealed class ArchiveSettings
         PanelY = _store.Get("panel.y", -1);
         PanelWidth = _store.Get("panel.width", 0);
         PanelHeight = _store.Get("panel.height", 0);
+        PanelPinned = _store.Get("panel.pinned", false);
     }
 
     public string ArchiveRoot { get; set; }
@@ -57,6 +58,9 @@ public sealed class ArchiveSettings
     public double PanelWidth { get; set; }
 
     public double PanelHeight { get; set; }
+
+    /// <summary>是否"顶住"：顶住后面板不能被拖动（位置锁死），但点按交互照常。</summary>
+    public bool PanelPinned { get; set; }
 
     public bool IsAutoDownload(FileSource source) =>
         AutoDownload.TryGetValue(source.Key(), out var value) && value;
@@ -92,6 +96,7 @@ public sealed class ArchiveSettings
         _store.Set("panel.y", PanelY);
         _store.Set("panel.width", PanelWidth);
         _store.Set("panel.height", PanelHeight);
+        _store.Set("panel.pinned", PanelPinned);
         _store.Flush();
     }
 }

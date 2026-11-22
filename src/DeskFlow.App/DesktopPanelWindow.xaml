@@ -59,6 +59,8 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
+                                    ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
                             <Button Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="设置" Click="OpenSettings_Click" />
                             <Button Style="{StaticResource IconButton}" Content="&#xE8EF;" ToolTip="批处理 · 文件盘点" Click="OpenBatch_Click" />
                             <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />

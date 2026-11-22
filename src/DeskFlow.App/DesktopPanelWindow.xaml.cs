@@ -33,7 +33,17 @@ public partial class DesktopPanelWindow : Window
     private readonly PanelViewModel _viewModel;
     private readonly ArchiveSettings _settings;
     private readonly DispatcherTimer _saveTimer;
+    private const int WmNcLButtonDblClk = 0x00A3;
+    private const int HtCaption = 2;
+
+    /// <summary>标题栏可拖区域高度（DIP）：从窗口顶到标题行底。</summary>
+    private const double CaptionHeight = 52;
+
+    /// <summary>右侧按钮区宽度（DIP），这块要留给按钮，不能被当成标题栏吃掉点击。</summary>
+    private const double CaptionRightReserved = 148;
+
     private bool _collapsed;
+    private bool _pinned;
     private double _expandedHeight = 640;
     private double _maxPanelHeight = 640;
 
@@ -50,6 +60,8 @@ public partial class DesktopPanelWindow : Window
             _saveTimer.Stop();
             PersistGeometry();
         };
+
+        _pinned = settings.PanelPinned;
 
         Loaded += OnLoaded;
         SizeChanged += OnSizeChanged;
@@ -84,6 +96,7 @@ public partial class DesktopPanelWindow : Window
 
         _expandedHeight = Height;
         _viewModel.ApplyPanelWidth(Width);
+        ApplyPinVisual();
 
         var left = _settings.PanelX >= 0 ? _settings.PanelX : area.Right - Width - 24;
         var top = _settings.PanelY >= 0 ? _settings.PanelY : area.Top + 60;
@@ -143,6 +156,11 @@ public partial class DesktopPanelWindow : Window
 
     private void Root_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (_pinned)
+        {
+            return;
+        }
+
         if (e.LeftButton == MouseButtonState.Pressed)
         {
             try
@@ -162,6 +180,13 @@ public partial class DesktopPanelWindow : Window
     /// </summary>
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == WmNcLButtonDblClk)
+        {
+            // 双击标题栏默认会最大化：这个面板不需要最大化，直接吞掉
+            handled = true;
+            return IntPtr.Zero;
+        }
+
         if (msg != WmNcHitTest)
         {
             return IntPtr.Zero;
@@ -171,46 +196,9 @@ public partial class DesktopPanelWindow : Window
         var screenPoint = new Point((short)(value & 0xFFFF), (short)((value >> 16) & 0xFFFF));
         var point = PointFromScreen(screenPoint);
 
-        const double edge = 14;
-        var nearLeft = point.X <= edge;
-        var nearRight = point.X >= ActualWidth - edge;
-        var nearTop = point.Y <= edge;
-        var nearBottom = point.Y >= ActualHeight - edge;
-
-        var hit = HtClient;
-        if (nearTop && nearLeft)
-        {
-            hit = HtTopLeft;
-        }
-        else if (nearTop && nearRight)
-        {
-            hit = HtTopRight;
-        }
-        else if (nearBottom && nearLeft)
-        {
-            hit = HtBottomLeft;
-        }
-        else if (nearBottom && nearRight)
-        {
-            hit = HtBottomRight;
-        }
-        else if (nearLeft)
-        {
-            hit = HtLeft;
-        }
-        else if (nearRight)
-        {
-            hit = HtRight;
-        }
-        else if (nearTop)
-        {
-            hit = HtTop;
-        }
-        else if (nearBottom)
-        {
-            hit = HtBottom;
-        }
-
+        var area = DeskFlow.Core.Shell.PanelHitTest.Hit(point.X, point.Y, ActualWidth, ActualHeight, _pinned);
+        var hit = ToHitCode(area);
+        DeskFlow.App.Services.Diagnostics.Log($"area={area} x={point.X:F0} y={point.Y:F0} pinned={_pinned}");
         handled = true;
         return new IntPtr(hit);
     }
@@ -230,6 +218,44 @@ public partial class DesktopPanelWindow : Window
         {
             Height = Math.Clamp(_expandedHeight, MinHeight, _maxPanelHeight);
         }
+    }
+
+    /// <summary>顶住 = 锁位置：点一下不可拖动，再点恢复拖动。状态写进 settings.json。</summary>
+    private static int ToHitCode(DeskFlow.Core.Shell.PanelHitArea area) => area switch
+    {
+        DeskFlow.Core.Shell.PanelHitArea.Caption => HtCaption,
+        DeskFlow.Core.Shell.PanelHitArea.Left => HtLeft,
+        DeskFlow.Core.Shell.PanelHitArea.Right => HtRight,
+        DeskFlow.Core.Shell.PanelHitArea.Top => HtTop,
+        DeskFlow.Core.Shell.PanelHitArea.Bottom => HtBottom,
+        DeskFlow.Core.Shell.PanelHitArea.TopLeft => HtTopLeft,
+        DeskFlow.Core.Shell.PanelHitArea.TopRight => HtTopRight,
+        DeskFlow.Core.Shell.PanelHitArea.BottomLeft => HtBottomLeft,
+        DeskFlow.Core.Shell.PanelHitArea.BottomRight => HtBottomRight,
+        _ => HtClient,
+    };
+
+    private void TogglePin_Click(object sender, RoutedEventArgs e)
+    {
+        _pinned = !_pinned;
+        DeskFlow.App.Services.Diagnostics.Log($"pin toggled → {_pinned}");
+        _settings.PanelPinned = _pinned;
+        _settings.Save();
+        ApplyPinVisual();
+    }
+
+    private void ApplyPinVisual()
+    {
+        if (PinButton is null)
+        {
+            return;
+        }
+
+        PinButton.Content = _pinned ? "\uE72E" : "\uE718";
+        PinButton.ToolTip = _pinned ? "已顶住：点一下解除锁定" : "顶住：点一下锁住位置，再点解除";
+        PinButton.Foreground = _pinned
+            ? new SolidColorBrush(Color.FromRgb(0xFF, 0xCE, 0x6B))
+            : new SolidColorBrush(Color.FromRgb(0xB9, 0xBF, 0xC7));
     }
 
     private void AutoDownload_Click(object sender, RoutedEventArgs e)
