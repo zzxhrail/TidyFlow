@@ -66,6 +66,13 @@
         <Setter Property="FontFamily" Value="{StaticResource FluentFont}" />
     </Style>
 
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource FluentFont}" />
+    </Style>
+
     <Style x:Key="Body" TargetType="TextBlock">
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -469,12 +476,12 @@
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontFamily" Value="{StaticResource FluentFont}" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="Margin" Value="0,2,0,2" />
+        <Setter Property="Margin" Value="0,1,0,1" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Grid>
-                        <Border x:Name="Bd" CornerRadius="4" Background="Transparent" Padding="12,9" Margin="0,0,6,0">
+                    <Grid Height="40">
+                        <Border x:Name="Bd" CornerRadius="4" Background="Transparent" Padding="12,0" Margin="0,0,8,0">
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
                         </Border>
                         <Border x:Name="Indicator" Width="3" Height="16" CornerRadius="2" HorizontalAlignment="Left"
@@ -504,13 +511,13 @@
                 <ControlTemplate TargetType="TabControl">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="196" />
+                            <ColumnDefinition Width="232" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" BorderBrush="#12FFFFFF" BorderThickness="0,0,1,0" Padding="8,14,6,14">
+                        <Border Grid.Column="0" BorderBrush="#0FFFFFFF" BorderThickness="0,0,1,0" Padding="8,16,8,16">
                             <ItemsPresenter />
                         </Border>
-                        <ContentPresenter Grid.Column="1" Margin="26,14,26,18" ContentSource="SelectedContent" />
+                        <ContentPresenter Grid.Column="1" Margin="30,22,30,22" ContentSource="SelectedContent" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
