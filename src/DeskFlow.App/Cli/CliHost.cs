@@ -94,7 +94,14 @@ public static class CliHost
         var report = new JobEngine().RunAsync(definition, context, catalog).GetAwaiter().GetResult();
 
         Console.WriteLine();
-        Console.WriteLine($"结果: {(report.Canceled ? "已取消" : report.Succeeded ? "成功" : "部分失败")}");
+        var verdict = report.Canceled
+            ? "已取消"
+            : report.Succeeded
+                ? "成功"
+                : report.ItemCount == 0
+                    ? "失败"
+                    : "部分失败";
+        Console.WriteLine($"结果: {verdict}");
         Console.WriteLine($"  条目: {report.ItemCount}  失败: {report.FailedCount}  耗时: {report.Duration.TotalSeconds:F1}s");
         foreach (var artifact in report.Artifacts)
         {
