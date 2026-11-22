@@ -86,17 +86,60 @@ public partial class InstallerWindow : Window
             KeepUserData: true);
 
         ToggleBusy(true);
-        Progress.Visibility = Visibility.Visible;
+        ProgressPanel.Visibility = Visibility.Visible;
+        StatusText.Foreground = (System.Windows.Media.Brush)FindResource("TextPrimaryBrush");
+        StatusText.Text = "准备安装…";
+        PercentText.Text = "0%";
         Progress.Value = 0;
+        Progress.IsIndeterminate = true;
 
         var progress = new Progress<(string Message, int Percent)>(tuple =>
         {
             StatusText.Text = tuple.Message;
-            Progress.Value = tuple.Percent;
+            PercentText.Text = tuple.Percent + "%";
+            if (tuple.Percent > 0)
+            {
+                Progress.IsIndeterminate = false;
+
+                // 让进度条"滑"到新值，而不是一格格跳（视觉上就是那种滚动前进）
+                var animation = new System.Windows.Media.Animation.DoubleAnimation
+                {
+                    To = tuple.Percent,
+                    Duration = TimeSpan.FromMilliseconds(260),
+                    EasingFunction = new System.Windows.Media.Animation.CubicEase
+                    {
+                        EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut,
+                    },
+                };
+
+                Progress.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, animation);
+            }
+
+            UpdateSteps(tuple.Percent);
         });
 
+        var startedAt = DateTime.UtcNow;
         var result = await Task.Run(() => InstallerService.Install(effective, (message, percent) =>
             ((IProgress<(string, int)>)progress).Report((message, percent))));
+
+        // 机器快的时候 66 MB 复制不到 200ms 就完了，进度条一闪而过；
+        // 这里给它一个最短 1.2 秒的可见时长（真实结果早就返回了，只是让过程看得见）
+        var elapsed = (DateTime.UtcNow - startedAt).TotalMilliseconds;
+        const double minimumVisibleMs = 1200;
+        if (result.Success && elapsed < minimumVisibleMs)
+        {
+            Progress.IsIndeterminate = false;
+            var remaining = minimumVisibleMs - elapsed;
+            var from = Math.Max(Progress.Value, 60);
+            Progress.BeginAnimation(
+                System.Windows.Controls.Primitives.RangeBase.ValueProperty,
+                new System.Windows.Media.Animation.DoubleAnimation(from, 100, TimeSpan.FromMilliseconds(remaining)));
+
+            StatusText.Text = "收尾：写入快捷方式与卸载项…";
+            PercentText.Text = "99%";
+            UpdateSteps(92);   // 让最后一步显示"进行中"，别全都提前打勾
+            await Task.Delay((int)remaining);
+        }
 
         ToggleBusy(false);
 
@@ -109,7 +152,10 @@ public partial class InstallerWindow : Window
 
         _installed = true;
         _installedDirectory = result.Message;
+        Progress.IsIndeterminate = false;
         Progress.Value = 100;
+        PercentText.Text = "100%";
+        UpdateSteps(100);
         StatusText.Foreground = System.Windows.Media.Brushes.SeaGreen;
         StatusText.Text = $"安装完成：{_installedDirectory}";
         HintText.Text = "已建好快捷方式与卸载项；「设置 → 应用」里可以看到 DeskFlow，可随时卸载。";
@@ -138,6 +184,20 @@ public partial class InstallerWindow : Window
         }
 
         Close();
+    }
+
+    /// <summary>按百分比点亮步骤：完成打勾、当前加粗。</summary>
+    private void UpdateSteps(int percent)
+    {
+        var steps = new[] { (1, Step1, 5), (2, Step2, 20), (3, Step3, 75), (4, Step4, 92) };
+        foreach (var (_, block, threshold) in steps)
+        {
+            var text = block.Text[2..];   // 去掉开头的 ○/●/✓
+            block.Text = percent >= Math.Min(threshold + 8, 100) ? "✓  " + text : percent >= threshold ? "●  " + text : "○  " + text;
+            block.Foreground = percent >= threshold
+                ? (System.Windows.Media.Brush)FindResource("TextPrimaryBrush")
+                : (System.Windows.Media.Brush)FindResource("TextTertiaryBrush");
+        }
     }
 
     private void ToggleBusy(bool busy)

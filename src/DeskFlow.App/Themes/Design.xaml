@@ -459,6 +459,53 @@
         </Setter>
     </Style>
 
+    <!-- ============ 进度条（Win11：圆角 + 强调色；不确定态走跑马灯） ============ -->
+    <Style x:Key="FluentProgress" TargetType="ProgressBar">
+        <Setter Property="Height" Value="6" />
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid Height="{TemplateBinding Height}" ClipToBounds="True">
+                        <Border CornerRadius="3" Background="{TemplateBinding Background}" />
+                        <Border x:Name="PART_Track" Background="Transparent">
+                            <Grid>
+                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="3"
+                                        Background="{TemplateBinding Foreground}" />
+                            </Grid>
+                        </Border>
+                        <Border x:Name="Marquee" Width="160" CornerRadius="3" Opacity="0.75" Visibility="Collapsed"
+                                HorizontalAlignment="Left" Background="{TemplateBinding Foreground}">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="MarqueeX" X="-160" />
+                            </Border.RenderTransform>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="Marquee" Property="Visibility" Value="Visible" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="MarqueeStory">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="MarqueeX"
+                                                         Storyboard.TargetProperty="X"
+                                                         From="-160" To="1200" Duration="0:0:1.6" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="MarqueeStory" />
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ============ 卡片（Win11 设置卡） ============ -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="CornerRadius" Value="8" />
