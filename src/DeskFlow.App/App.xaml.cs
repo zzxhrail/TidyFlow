@@ -318,7 +318,18 @@ public partial class App : Application
                 exit: ExitApplication);
 
             Panel.StartWatching();
+            // 启动补扫：这段时间识别到的都是历史文件，不弹系统通知
+            Panel.SuppressNotifications = true;
             Panel.ImportRecent(TimeSpan.FromMinutes(30));
+
+            var quietTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            quietTimer.Tick += (_, _) =>
+            {
+                quietTimer.Stop();
+                Panel.SuppressNotifications = false;
+                Diagnostics.Log("startup quiet window closed");
+            };
+            quietTimer.Start();
         }
         catch (Exception ex)
         {

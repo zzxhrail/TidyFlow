@@ -356,6 +356,10 @@ public sealed class PanelViewModel : ObservableObject
         public override string ToString() => Title;
     }
 
+
+    /// <summary>启动补扫期间为 true：这期间识别到的历史文件不弹系统通知。</summary>
+    public bool SuppressNotifications { get; set; }
+
     private string _section = "shortcuts";
 
     /// <summary>当前显示的分区：shortcuts / recent / category。</summary>
@@ -982,6 +986,10 @@ public sealed class PanelViewModel : ObservableObject
         record.Status = ArchiveStatus.Pending;
         _index.Upsert(record);
         Log($"待接收：{incoming.Source.DisplayName()} · {info.Name}");
+        // 系统托盘通知：新文件进来时必须让用户看到（启动补捞的历史文件不弹，避免刷屏）
+        {
+            ToastService.Show($"收到新文件（{incoming.Source.DisplayName()}）", info.Name, incoming.FullPath);
+        }
         BuildPending();
         BuildRecent();
     }

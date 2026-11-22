@@ -61,7 +61,8 @@ public sealed class TrayIconService : IDisposable
             _notifyIcon.BalloonTipTitle = title;
             _notifyIcon.BalloonTipText = detail;
             _notifyIcon.BalloonTipIcon = ToolTipIcon.Info;
-            _notifyIcon.ShowBalloonTip(4000);
+            _notifyIcon.ShowBalloonTip(8000);
+            Diagnostics.Log($"balloon shown: {title} / {detail}");
         };
 
         Diagnostics.Log("tray icon created");
