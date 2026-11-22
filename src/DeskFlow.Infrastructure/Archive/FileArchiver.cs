@@ -13,8 +13,13 @@ public sealed class FileArchiver
     private const int HashSampleBytes = 1024 * 1024;
 
     private readonly CategoryCatalog _categories;
+    private readonly DeskFlow.Core.Analysis.IContentClassifier? _classifier;
 
-    public FileArchiver(CategoryCatalog categories) => _categories = categories;
+    public FileArchiver(CategoryCatalog categories, DeskFlow.Core.Analysis.IContentClassifier? classifier = null)
+    {
+        _categories = categories;
+        _classifier = classifier;
+    }
 
     public async Task<ArchiveOutcome> ArchiveAsync(FileRecord record, ArchiveOptions options, CancellationToken cancellationToken = default)
     {
@@ -27,10 +32,28 @@ public sealed class FileArchiver
                 return ArchiveOutcome.Failed(record, record.Error);
             }
 
-            // 拖拽到某个分类上时用强制类别，否则按扩展名自动分类
-            var categoryName = string.IsNullOrWhiteSpace(options.CategoryOverride)
-                ? _categories.Resolve(record.FileName).Name
-                : options.CategoryOverride!;
+            // 优先顺序：拖到某分类（强制） > 内容识别 > 扩展名规则
+            string categoryName;
+            if (!string.IsNullOrWhiteSpace(options.CategoryOverride))
+            {
+                categoryName = options.CategoryOverride!;
+                record.CategoryReason = "手动指定";
+            }
+            else
+            {
+                var byContent = options.UseContentClassification ? _classifier?.Classify(record.SourcePath, record.FileName) : null;
+                if (byContent is not null)
+                {
+                    categoryName = byContent.Category;
+                    record.CategoryReason = $"内容识别（{byContent.Reason}）";
+                }
+                else
+                {
+                    categoryName = _categories.Resolve(record.FileName).Name;
+                    record.CategoryReason ??= "扩展名规则";
+                }
+            }
+
             record.Category = categoryName;
 
             var categoryDirectory = Path.Combine(options.ArchiveRoot, SanitizeFolderName(categoryName));

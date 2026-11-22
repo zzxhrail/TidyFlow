@@ -32,6 +32,66 @@ public partial class App : Application
     /// <summary>系统托盘（面板收起来后程序继续在这里）。</summary>
     public static TrayIconService? Tray { get; private set; }
 
+    /// <summary>命令行归档：读完设置后按同一套规则（含内容分类）归档，输出结果。</summary>
+    private static int ImportFromCommandLine(string target)
+    {
+        try
+        {
+            var settings = new Infrastructure.Settings.ArchiveSettings();
+            var catalog = new Core.Categorization.CategoryCatalog();
+            var archiver = new Infrastructure.Archive.FileArchiver(catalog, new Infrastructure.Analysis.KeywordContentClassifier());
+            var files = File.Exists(target)
+                ? [target]
+                : Directory.Exists(target) ? Directory.GetFiles(target, "*", SearchOption.TopDirectoryOnly) : [];
+
+            if (files.Length == 0)
+            {
+                Console.WriteLine("没找到可归档的文件：" + target);
+                return 2;
+            }
+
+            var ok = 0;
+            foreach (var file in files)
+            {
+                var record = new Core.Models.FileRecord
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    SourcePath = file,
+                    FileName = Path.GetFileName(file),
+                    SizeBytes = new FileInfo(file).Length,
+                    Source = Core.Models.FileSource.Manual,
+                    Category = "其他",
+                    DetectedAt = DateTimeOffset.Now,
+                };
+
+                var outcome = archiver.ArchiveAsync(record, new Core.Models.ArchiveOptions
+                {
+                    ArchiveRoot = settings.ArchiveRoot,
+                    MoveInsteadOfCopy = settings.MoveInsteadOfCopy,
+                    UseContentClassification = settings.ContentClassification,
+                }).GetAwaiter().GetResult();
+
+                if (outcome.Success)
+                {
+                    ok++;
+                    Console.WriteLine($"{record.FileName} → {record.Category}（{record.CategoryReason}）");
+                }
+                else
+                {
+                    Console.WriteLine($"{record.FileName} 失败：{outcome.Error}");
+                }
+            }
+
+            Console.WriteLine($"完成 {ok}/{files.Length}");
+            return ok == files.Length ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("归档失败：" + ex.Message);
+            return 1;
+        }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -93,6 +153,15 @@ public partial class App : Application
                     .Select(static c => new CategoryDefinition(c[0], c.Skip(1))));
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
+
+            // --import <文件或目录>：按当前设置归档一次（内容分类也生效），给脚本/右键菜单用
+            var importIndex = Array.FindIndex(e.Args, static x => x.Equals("--import", StringComparison.OrdinalIgnoreCase));
+            if (importIndex >= 0 && importIndex + 1 < e.Args.Length)
+            {
+                var exitCode = ImportFromCommandLine(e.Args[importIndex + 1]);
+                Shutdown(exitCode);
+                return;
+            }
 
             // --preview <文件>：直接开预览窗口（也方便做"用 TidyFlow 预览"的右键菜单项）
             var previewIndex = Array.FindIndex(e.Args, static x => x.Equals("--preview", StringComparison.OrdinalIgnoreCase));

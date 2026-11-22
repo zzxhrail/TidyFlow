@@ -40,7 +40,7 @@ public sealed class PanelViewModel : ObservableObject
         _settings = settings;
         _index = index;
         _categories = categories;
-        _archiver = new FileArchiver(categories);
+        _archiver = new FileArchiver(categories, new DeskFlow.Infrastructure.Analysis.KeywordContentClassifier());
         _archiveRoot = settings.ArchiveRoot;
 
         BuildSourceToggles();
@@ -618,6 +618,7 @@ public sealed class PanelViewModel : ObservableObject
         {
             ArchiveRoot = _settings.ArchiveRoot,
             MoveInsteadOfCopy = _settings.MoveInsteadOfCopy,
+            UseContentClassification = _settings.ContentClassification,
         });
 
         _index.Upsert(outcome.Record);
@@ -627,7 +628,9 @@ public sealed class PanelViewModel : ObservableObject
             _archiveLog.Archive(record.FileName, record.Category, record.Source.DisplayName(), record.SourcePath, record.ArchivedPath ?? string.Empty);
         }
 
-        Log(outcome.Success ? $"已归档 {record.FileName} → {record.Category}" : $"归档失败 {record.FileName}: {outcome.Error}");
+        Log(outcome.Success
+            ? $"已归档 {record.FileName} → {record.Category}" + (record.CategoryReason is null ? string.Empty : $"（{record.CategoryReason}）")
+            : $"归档失败 {record.FileName}: {outcome.Error}");
         BuildRecent();
         BuildPending();
         BuildCategories();
@@ -773,6 +776,7 @@ public sealed class PanelViewModel : ObservableObject
         {
             ArchiveRoot = _settings.ArchiveRoot,
             MoveInsteadOfCopy = _settings.MoveInsteadOfCopy,
+            UseContentClassification = _settings.ContentClassification,
         });
 
         var dispatcher = Application.Current?.Dispatcher;
@@ -1013,6 +1017,7 @@ public sealed class PanelViewModel : ObservableObject
                 ArchiveRoot = archiveRoot,
                 MoveInsteadOfCopy = move,
                 CategoryOverride = categoryName,
+                UseContentClassification = _settings.ContentClassification,
             });
 
             _index.Upsert(outcome.Record);
@@ -1150,6 +1155,7 @@ public sealed class PanelViewModel : ObservableObject
             {
                 ArchiveRoot = _settings.ArchiveRoot,
                 MoveInsteadOfCopy = _settings.MoveInsteadOfCopy,
+                UseContentClassification = _settings.ContentClassification,
             });
 
             _index.Upsert(outcome.Record);
@@ -1274,11 +1280,18 @@ public sealed class PanelViewModel : ObservableObject
     private void BuildCategories()
     {
         Categories.Clear();
+
+        var archiveRoot = _settings.ArchiveRoot;
+        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var records = _index.All.Where(static r => r.Status == ArchiveStatus.Archived).ToList();
+
+        // 1) 分类规则里的类别
         foreach (var category in _categories.All)
         {
-            var directory = Path.Combine(_settings.ArchiveRoot, FileArchiver.SanitizeFolderName(category.Name));
+            var directory = Path.Combine(archiveRoot, FileArchiver.SanitizeFolderName(category.Name));
             var count = records.Count(r => string.Equals(r.Category, category.Name, StringComparison.OrdinalIgnoreCase));
+            known.Add(category.Name);
+
             if (count == 0 && !Directory.Exists(directory))
             {
                 continue;
@@ -1290,6 +1303,49 @@ public sealed class PanelViewModel : ObservableObject
                 $"{count} 个",
                 ShellIconProvider.ForFolder(directory),
                 directory));
+        }
+
+        // 2) 归档目录里实际存在的文件夹（"按内容自动分类"会现场建目录，必须能在二级菜单看到）
+        try
+        {
+            if (Directory.Exists(archiveRoot))
+            {
+                foreach (var directory in Directory.EnumerateDirectories(archiveRoot)
+                             .OrderBy(static d => Path.GetFileName(d), StringComparer.CurrentCulture))
+                {
+                    var name = Path.GetFileName(directory);
+                    if (known.Contains(name))
+                    {
+                        continue;
+                    }
+
+                    int count;
+                    try
+                    {
+                        count = Directory.EnumerateFiles(directory).Count();
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        continue;
+                    }
+
+                    if (count == 0)
+                    {
+                        continue;
+                    }
+
+                    Categories.Add(MakeTile(
+                        TileKind.Browse,
+                        name,
+                        $"{count} 个",
+                        ShellIconProvider.ForFolder(directory),
+                        directory));
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log("扫描归档目录失败：" + ex.Message);
         }
 
         RebuildNav();

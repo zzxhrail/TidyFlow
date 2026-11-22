@@ -578,6 +578,53 @@ Console.WriteLine("[18] Drop into category");
     Check("不指定时自动分类", auto.Category == "图片", auto.Category);
 }
 
+
+// ---------- 19. 内容分类 ----------
+Console.WriteLine("[19] Content classifier");
+{
+    var root = NewTempDir();
+    var archiveRoot = Path.Combine(root, "archive");
+    var classifier = new DeskFlow.Infrastructure.Analysis.KeywordContentClassifier();
+
+    string MakeDocx(string name, string body)
+    {
+        var path = Path.Combine(root, name);
+        using var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create);
+        var entry = zip.CreateEntry("word/document.xml");
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write($"<?xml version=\"1.0\"?><w:document><w:body><w:p><w:r><w:t>{body}</w:t></w:r></w:p></w:body></w:document>");
+        return path;
+    }
+
+    var invoice = MakeDocx("scan01.docx",
+        "增值税专用发票 开票日期 2026-11-20 价税合计 1130.00 纳税人识别号 91500000XXXX 销售方 购买方");
+    var invoiceResult = classifier.Classify(invoice, "scan01.docx");
+    Check("发票正文识别为发票", invoiceResult?.Category == "发票", invoiceResult?.Category + " / " + invoiceResult?.Reason);
+
+    var contract = MakeDocx("agreement.docx",
+        "劳动合同 甲方 TidyFlow 科技有限公司 乙方 张三 签署日期 违约责任 本协议一式两份");
+    var contractResult = classifier.Classify(contract, "agreement.docx");
+    Check("合同正文识别为合同", contractResult?.Category == "合同", contractResult?.Category + " / " + contractResult?.Reason);
+
+    var noise = Path.Combine(root, "note.txt");
+    await File.WriteAllTextAsync(noise, "hello world, nothing special here at all");
+    Check("内容判不出来时返回 null", classifier.Classify(noise, "note.txt") is null);
+
+    // 归档器：内容分类 → 自动建目录
+    var archiver = new FileArchiver(new CategoryCatalog(), classifier);
+    var record = NewRecord(invoice, FileSource.Manual);
+    var outcome = await archiver.ArchiveAsync(record, new ArchiveOptions { ArchiveRoot = archiveRoot });
+    Check("按内容归档成功", outcome.Success, outcome.Error);
+    Check("落到 发票 目录", record.Category == "发票" && record.ArchivedPath!.Contains("发票"), record.ArchivedPath);
+    Check("目录被自动创建", Directory.Exists(Path.Combine(archiveRoot, "发票")));
+    Check("记录了分类依据", record.CategoryReason?.StartsWith("内容识别") == true, record.CategoryReason);
+
+    // 关闭开关 → 回到扩展名规则
+    var record2 = NewRecord(invoice, FileSource.Manual);
+    await archiver.ArchiveAsync(record2, new ArchiveOptions { ArchiveRoot = archiveRoot, UseContentClassification = false });
+    Check("关掉开关后按扩展名", record2.Category == "办公文档", record2.Category);
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0
     ? $"全部通过：{checks} 项检查"

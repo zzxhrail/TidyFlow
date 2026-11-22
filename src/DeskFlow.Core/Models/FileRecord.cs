@@ -43,6 +43,9 @@ public sealed class FileRecord
 
     public string? Hash { get; set; }
 
+    /// <summary>为什么归到这一类：扩展名规则 / 内容识别（附带命中关键词）。</summary>
+    public string? CategoryReason { get; set; }
+
     /// <summary>同一次批量归档的标记：短时间内、同一类别连续归档的文件共用一个批次。</summary>
     public string? BatchId { get; set; }
 

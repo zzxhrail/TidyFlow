@@ -34,6 +34,7 @@ public sealed class ArchiveSettings
         PanelWidth = _store.Get("panel.width", 0);
         PanelHeight = _store.Get("panel.height", 0);
         PanelLayoutMigrated = _store.Get("panel.layout.v2", false);
+        ContentClassification = _store.Get("archive.content-ai", true);
         PanelPinned = _store.Get("panel.pinned", false);
         DiscoveryRoots = _store.Get("discovery.roots", new List<string>()) ?? new List<string>();
         GlobalWatchEnabled = _store.Get("watch.global.enabled", false);
@@ -66,6 +67,9 @@ public sealed class ArchiveSettings
 
     /// <summary>是否已按 0.9 的新默认尺寸（更宽的「导航 + 内容」布局）迁移过。</summary>
     public bool PanelLayoutMigrated { get; set; }
+
+    /// <summary>是否按文件内容（读正文关键词）自动分类，而不是只看扩展名。</summary>
+    public bool ContentClassification { get; set; } = true;
 
     /// <summary>是否"顶住"：顶住后面板不能被拖动（位置锁死），但点按交互照常。</summary>
     public bool PanelPinned { get; set; }
@@ -115,6 +119,7 @@ public sealed class ArchiveSettings
         _store.Set("panel.width", PanelWidth);
         _store.Set("panel.height", PanelHeight);
         _store.Set("panel.layout.v2", PanelLayoutMigrated);
+        _store.Set("archive.content-ai", ContentClassification);
         _store.Set("panel.pinned", PanelPinned);
         _store.Set("discovery.roots", DiscoveryRoots);
         _store.Set("watch.global.enabled", GlobalWatchEnabled);

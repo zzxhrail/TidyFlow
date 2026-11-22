@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         SourceList.ItemsSource = viewModel.Sources;
         ArchiveRootBox.Text = settings.ArchiveRoot;
         MoveCheck.IsChecked = settings.MoveInsteadOfCopy;
+        ContentAiCheck.IsChecked = settings.ContentClassification;
 
         RefreshWatchList();
         RefreshCategories();
@@ -440,6 +441,7 @@ public partial class SettingsWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _settings.MoveInsteadOfCopy = MoveCheck.IsChecked == true;
+        _settings.ContentClassification = ContentAiCheck.IsChecked == true;
 
         _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
         _settings.GlobalRoots = CurrentGlobalRoots();

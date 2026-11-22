@@ -10,7 +10,10 @@ public sealed class ArchiveOptions
     /// <summary>同名同内容视为重复，直接跳过并不覆盖。</summary>
     public bool SkipDuplicates { get; init; } = true;
 
-    /// <summary>强制归档到指定类别（拖拽到某个分类上时用）；为 null 则按扩展名自动分类。</summary>
+    /// <summary>是否启用"按内容分类"（读正文关键词判断类别），默认开启。</summary>
+    public bool UseContentClassification { get; init; } = true;
+
+    /// <summary>强制归档到指定类别（拖拽到某个分类上时用）；为 null 则按内容/扩展名自动分类。</summary>
     public string? CategoryOverride { get; init; }
 }
 
