@@ -713,3 +713,21 @@ System.InvalidOperationException: Transform is not valid for Window.
 异常发生在 `Loaded` 里，WPF 已经把窗口框架画出来了、内容还没渲染，于是就是白屏 + 一条 crash.log。
 
 修法：`Animations` 检测到目标是 `Window` 时，动画自动改作用到它的 **Content** 元素上；并且三个动画方法都包了 try/catch，动画失败也只会"瞬显"，不会让界面白屏。
+
+
+## 收起不再是空白卡片（0.9.6）
+
+![收起状态](docs/screenshot-panel-collapsed.png)
+
+现象：点标题栏的「—」收起，窗口变成一块**空白深色卡片**，连标题都没了。
+
+两个原因叠在一起：
+
+1. 收起时把整块 `BodyScroller` 隐藏了，而**标题栏就在这块里面**，所以连 Logo 和按钮一起消失；
+2. `Height = 60` 被 `MinHeight = 380` 顶回去，窗口实际仍是 380 高 → 一块大空白。
+
+现在的做法：
+
+- 只隐藏「标题以下的分区」（`Grid.Row > 0` 的行），标题栏始终保留；
+- 收起前先把 `MinHeight` 放到 92，再设高度，收起后是一条 92px 的标题条；
+- 展开时恢复原高度并把 `MinHeight` 复位到 380，随后强制重排/重绘一次，内容立刻回来。

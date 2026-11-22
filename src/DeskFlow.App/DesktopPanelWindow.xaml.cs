@@ -329,21 +329,66 @@ public partial class DesktopPanelWindow : Window
         return new IntPtr(hit);
     }
 
+    private const double CollapsedHeight = 92;   // 要留够标题栏高度（含 16px 内边距），否则标题会被裁掉
+
     private void ToggleCollapse_Click(object sender, RoutedEventArgs e)
     {
         _collapsed = !_collapsed;
-        BodyScroller.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
-        CollapseButton.Content = _collapsed ? "\uE922" : "\uE921";
 
         if (_collapsed)
         {
             _expandedHeight = Height;
-            Height = 60;
+
+            // 只收起标题栏以下的分区；窗口高度也要放开 MinHeight，否则会被抬回 380 变成空白卡片
+            MinHeight = CollapsedHeight;
+            SetBodyRowsVisible(false);
+            Height = CollapsedHeight;
+            CollapseButton.Content = "\uE922";
         }
         else
         {
-            Height = Math.Clamp(_expandedHeight, MinHeight, _maxPanelHeight);
+            Height = Math.Clamp(_expandedHeight, 380, _maxPanelHeight);
+            MinHeight = 380;
+            SetBodyRowsVisible(true);
+            CollapseButton.Content = "\uE921";
         }
+
+        // 尺寸突变后让布局/渲染重跑一遍（不用 Hide/Show，避免打断渲染面）
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            Root.InvalidateMeasure();
+            Root.InvalidateArrange();
+            Root.InvalidateVisual();
+            Root.UpdateLayout();
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>收/展时只切换标题行以外的分区，标题栏（Logo、按钮）始终可见。</summary>
+    private void SetBodyRowsVisible(bool visible)
+    {
+        if (BodyScroller is null)
+        {
+            return;
+        }
+
+        var target = visible ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var child in BodyScroller.Children)
+        {
+            if (child is FrameworkElement element && Grid.GetRow(element) > 0)
+            {
+                element.Visibility = target;
+            }
+        }
+    }
+
+    private void ScheduleForceRepaint()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ForceRepaint();
+            Root.Opacity = 1;
+            Root.RenderTransform = Transform.Identity;
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     /// <summary>顶住 = 锁位置：点一下不可拖动，再点恢复拖动。状态写进 settings.json。</summary>
