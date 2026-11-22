@@ -1,5 +1,7 @@
+using System.IO;
 using System.Windows;
 using DeskFlow.App.Cli;
+using DeskFlow.App.Install;
 using DeskFlow.App.ViewModels;
 using DeskFlow.Core.Categorization;
 using DeskFlow.Core.Models;
@@ -29,6 +31,45 @@ public partial class App : Application
     {
         base.OnStartup(e);
         AppPaths.EnsureCreated();
+
+        // 安装 / 卸载入口：同一个 exe，按参数或文件名分流
+        var setupOptions = SetupOptions.Parse(e.Args);
+        var exeName = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? string.Empty);
+        var wantsUninstall = e.Args.Any(static a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase));
+        var wantsInstall = e.Args.Any(static a => a.Equals("--install", StringComparison.OrdinalIgnoreCase))
+            || exeName.StartsWith("DeskFlow-Setup", StringComparison.OrdinalIgnoreCase);
+
+        if (wantsUninstall)
+        {
+            if (setupOptions.Silent)
+            {
+                var result = InstallerService.Uninstall(setupOptions.KeepUserData);
+                Shutdown(result.Success ? 0 : 1);
+                return;
+            }
+
+            var uninstallWindow = new UninstallWindow(setupOptions);
+            MainWindow = uninstallWindow;
+            uninstallWindow.Closed += (_, _) => Shutdown(0);
+            uninstallWindow.Show();
+            return;
+        }
+
+        if (wantsInstall)
+        {
+            if (setupOptions.Silent)
+            {
+                var result = InstallerService.Install(setupOptions);
+                Shutdown(result.Success ? 0 : 1);
+                return;
+            }
+
+            var installerWindow = new InstallerWindow(setupOptions);
+            MainWindow = installerWindow;
+            installerWindow.Closed += (_, _) => Shutdown(0);
+            installerWindow.Show();
+            return;
+        }
 
         if (CliHost.IsCliInvocation(e.Args))
         {

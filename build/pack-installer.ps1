@@ -1,47 +1,60 @@
 ﻿<#
 .SYNOPSIS
-    打 MSI 安装包（WiX v7，per-user，无需管理员）。
+    打安装包：把发布出来的单文件 EXE 复制成带安装界面的 Setup（同一个二进制）。
 
 .DESCRIPTION
-    1) 先跑 pack.ps1 出单文件 EXE；
-    2) 用 wix build 把 EXE + 快捷方式打成 dist\DeskFlow-Setup-<版本>.msi。
-    安装位置 %LOCALAPPDATA%\Programs\DeskFlow，用户数据仍在 %LOCALAPPDATA%\DeskFlow（卸载不删数据）。
+    安装界面本身就在 DeskFlow.exe 里：文件名以 DeskFlow-Setup 开头（或带 --install）时进安装模式。
+    所以安装包 = 一份改名副本，不需要额外运行时，体积与主程序一致。
+
+      安装（界面） : DeskFlow-Setup-0.6.0.exe
+      静默安装     : DeskFlow-Setup-0.6.0.exe --install --silent --dir="D:\Apps\DeskFlow" --autostart=0 --shortcuts=1
+      卸载（界面） : "%LOCALAPPDATA%\Programs\DeskFlow\DeskFlow.exe" --uninstall
+      静默卸载     : "%LOCALAPPDATA%\Programs\DeskFlow\DeskFlow.exe" --uninstall --silent --keepdata=1
+
+.PARAMETER Msi
+    额外产出企业部署用的 MSI（需要 wix 工具）。
 
 .EXAMPLE
     powershell -File build/pack-installer.ps1
+    powershell -File build/pack-installer.ps1 -Msi
 #>
 [CmdletBinding()]
 param(
-    [string] $Version = '0.5.2',
-    [switch] $SkipExe
+    [string] $Version = '0.6.0',
+    [switch] $SkipExe,
+    [switch] $Msi
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
+    $exe = Join-Path $root 'dist\DeskFlow.exe'
     if (-not $SkipExe) {
         & (Join-Path $PSScriptRoot 'pack.ps1')
         if ($LASTEXITCODE -ne 0) { throw 'pack.ps1 失败' }
     }
 
-    $wix = Get-Command wix -ErrorAction SilentlyContinue
-    if (-not $wix) {
-        throw '找不到 wix 命令。先执行: dotnet tool install --global wix'
-    }
+    if (-not (Test-Path $exe)) { throw "找不到 $exe" }
 
-    $out = Join-Path $root "dist\DeskFlow-Setup-$Version.msi"
-    $exe = Join-Path $root 'dist\DeskFlow.exe'
-    if (-not (Test-Path $exe)) { throw "找不到 $exe，先跑 pack.ps1" }
-
-    wix build "installer\DeskFlow.wxs" -arch x64 -d "SourceExe=$exe" -o $out
-    if ($LASTEXITCODE -ne 0) { throw "wix build 失败（退出码 $LASTEXITCODE）" }
-
-    $mb = [math]::Round((Get-Item $out).Length / 1MB, 1)
+    $setup = Join-Path $root "dist\DeskFlow-Setup-$Version.exe"
+    Copy-Item $exe $setup -Force
+    $mb = [math]::Round((Get-Item $setup).Length / 1MB, 1)
     Write-Host ""
-    Write-Host "安装包: $out ($mb MB)" -ForegroundColor Green
-    Write-Host ('静默安装: msiexec /i "' + $out + '" /qn')
-    Write-Host ('静默卸载: msiexec /x "' + $out + '" /qn')
+    Write-Host "安装包: $setup ($mb MB)" -ForegroundColor Green
+    Write-Host ('双击安装（有界面）: "' + $setup + '"')
+    Write-Host ('静默安装:           "' + $setup + '" --install --silent --dir="%LOCALAPPDATA%\Programs\DeskFlow" --autostart=1 --shortcuts=1')
+    Write-Host ('卸载:               "%LOCALAPPDATA%\Programs\DeskFlow\DeskFlow.exe" --uninstall')
+
+    if ($Msi) {
+        $wix = Get-Command wix -ErrorAction SilentlyContinue
+        if (-not $wix) { throw '找不到 wix，先执行: dotnet tool install --global wix --version 4.0.6' }
+
+        $msiOut = Join-Path $root "dist\DeskFlow-Setup-$Version.msi"
+        wix build 'installer\DeskFlow.wxs' -arch x64 -d "SourceExe=$exe" -o $msiOut
+        if ($LASTEXITCODE -ne 0) { throw "wix build 失败（退出码 $LASTEXITCODE）" }
+        Write-Host "MSI: $msiOut" -ForegroundColor Green
+    }
 }
 finally {
     Pop-Location

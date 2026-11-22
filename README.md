@@ -47,43 +47,54 @@
 
 ---
 
-## 二、安装
+## 二、安装与卸载
 
-**方式一：安装包（推荐）**
+![安装界面](docs/screenshot-installer.png)
+
+**双击安装包** → 选安装位置、勾开机自启/快捷方式 → 开始安装：
 
 ```
-dist\DeskFlow-Setup-0.5.0.msi      # 双击安装，无需管理员权限
+dist\DeskFlow-Setup-0.6.0.exe
 ```
 
-- 装到 `%LOCALAPPDATA%\Programs\DeskFlow`，同时建桌面与开始菜单快捷方式；
-- 卸载走「设置 → 应用」或 `msiexec /x "dist\DeskFlow-Setup-0.5.0.msi" /qn`；
-- 卸载**不删**用户数据（`%LOCALAPPDATA%\DeskFlow` 里的配置、索引、日志）；
-- 重新构建：`powershell -File build/pack-installer.ps1`（需要 `dotnet tool install --global wix --version 4.0.6`）。
+安装界面能改的东西：
 
-**方式二：绿色版**
+| 选项 | 说明 |
+| --- | --- |
+| 安装位置 | 默认 `%LOCALAPPDATA%\Programs\DeskFlow`，可改成任意目录（建议仍放用户目录，免管理员） |
+| 开机自动启动 | 写 `HKCU\...\Run`，登录后自动起面板并继续按规则归档 |
+| 创建桌面 / 开始菜单快捷方式 | 两个勾选相互独立 |
+| 覆盖安装 | 已装过会提示原安装位置，继续则只替换程序文件，配置与归档记录保留 |
+
+安装做四件事：复制程序 → 建快捷方式 →（可选）开机自启 → 写「设置 → 应用」里的卸载项。
+
+![卸载界面](docs/screenshot-uninstaller.png)
+
+**卸载**：设置 → 应用 → DeskFlow → 卸载（或直接跑 `DeskFlow.exe --uninstall`）。
+卸载界面会显示安装位置与占用空间，并给一个「保留我的配置与归档索引」勾选：
+
+- 勾着（默认）：只删程序、快捷方式、开机自启、卸载项；配置/日志/索引留在 `%LOCALAPPDATA%\DeskFlow`，重装即接上；
+- 取消勾选：连配置、日志、索引一起删；
+- **归档目录里的文件永远不会被删**。
+
+### 静默模式（批量部署 / 自动化）
+
+```powershell
+# 安装
+.\DeskFlow-Setup-0.6.0.exe --install --silent --dir="D:\Apps\DeskFlow" --autostart=1 --shortcuts=1
+# 卸载（保留数据）
+"$env:LOCALAPPDATA\Programs\DeskFlow\DeskFlow.exe" --uninstall --silent --keepdata=1
+```
+
+退出码 0 = 成功。
+
+### 绿色版（不安装）
 
 ```
 dist\DeskFlow.exe
 ```
 
-1. 双击启动，桌面出现面板（可拖到任意位置，下次记住坐标）。
-2. 顶部勾选要「自动下载」的来源；检测不到的来源置灰并显示「未检测到目录」。
-3. 对方发来文件后：
-   - 勾了自动下载 → 很快出现在「最近归档」，文件已按类别放进归档目录；
-   - 没勾 → 出现在「待接收」（黄色标题区），点图标归档，右键可忽略。
-4. 点「分类」里的文件夹直接打开对应归档目录。
-
-归档根目录默认 `文档\DeskFlow\output\archive`，可在设置里改。
-
-### 命令行（同一个 exe）
-
-```powershell
-.\dist\DeskFlow.exe --run "D:\待整理" --out "D:\报表"   # 批量盘点，出 report.csv / report.json
-.\dist\DeskFlow.exe --help
-```
-
-退出码：0 成功 / 1 有失败条目 / 2 参数或运行错误，可挂计划任务或 CI。
-
+同一个 exe：不装也能直接用；文件名以 `DeskFlow-Setup` 开头或带 `--install` 时进安装模式，带 `--uninstall` 时进卸载模式。
 ---
 
 ## 三、数据放在哪

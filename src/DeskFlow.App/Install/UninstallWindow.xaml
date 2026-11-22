@@ -1,0 +1,54 @@
+<Window x:Class="DeskFlow.App.Install.UninstallWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="卸载 DeskFlow" Width="560" Height="420" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" Background="#F6F7F9"
+        FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="13">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#181A1F" Padding="22,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="34" Height="34" CornerRadius="8" Background="#E5484D">
+                    <TextBlock Text="×" Foreground="White" FontWeight="Bold" FontSize="18"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="卸载 DeskFlow" Foreground="#FFFFFF" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SubtitleText" Text="仅移除程序本身" Foreground="#9AA0A6" FontSize="11.5" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="22,18">
+            <Border Background="White" BorderBrush="#E5E6EB" BorderThickness="1" CornerRadius="6" Padding="14,10">
+                <StackPanel>
+                    <TextBlock x:Name="LocationText" Text="安装位置：—" TextWrapping="Wrap" />
+                    <TextBlock x:Name="SizeText" Text="占用空间：—" Foreground="#8A8F99" FontSize="11.5" Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+
+            <CheckBox x:Name="KeepDataCheck" IsChecked="True" Margin="0,16,0,0"
+                      Content="保留我的配置与归档索引（%LOCALAPPDATA%DeskFlow）" />
+            <TextBlock Text="不勾选会连配置、日志、归档索引一起删除；归档目录里的文件永远不会被删。"
+                       Foreground="#8A8F99" FontSize="11.5" Margin="2,6,0,0" TextWrapping="Wrap" />
+
+            <ProgressBar x:Name="Progress" Height="6" Minimum="0" Maximum="100" Margin="0,18,0,0"
+                         Foreground="#E5484D" Background="#E5E6EB" BorderThickness="0" Visibility="Collapsed" />
+            <TextBlock x:Name="StatusText" Foreground="#5A6472" Margin="0,8,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E6EB" BorderThickness="0,1,0,0" Padding="22,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CancelButton" Content="取消" Click="Cancel_Click" Padding="18,7" Margin="0,0,8,0" />
+                <Button x:Name="UninstallButton" Content="卸载" Click="Uninstall_Click" Padding="22,7"
+                        Background="#E5484D" Foreground="White" BorderThickness="0" FontWeight="SemiBold" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
