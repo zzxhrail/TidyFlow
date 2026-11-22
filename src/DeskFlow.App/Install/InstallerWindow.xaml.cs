@@ -17,6 +17,8 @@ public partial class InstallerWindow : Window
     public InstallerWindow(SetupOptions options)
     {
         InitializeComponent();
+
+        Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         HeaderLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/icon-48.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);

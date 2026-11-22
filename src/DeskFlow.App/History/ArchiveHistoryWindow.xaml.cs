@@ -17,6 +17,8 @@ public partial class ArchiveHistoryWindow : Window
     public ArchiveHistoryWindow(PanelViewModel viewModel)
     {
         InitializeComponent();
+
+        Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;

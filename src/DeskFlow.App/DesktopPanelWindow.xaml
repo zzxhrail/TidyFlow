@@ -201,7 +201,7 @@
                         </Grid>
                     </Border>
 
-                    <ScrollViewer Grid.Column="1" Margin="12,0,0,0" VerticalScrollBarVisibility="Auto"
+                    <ScrollViewer x:Name="ContentHost" Grid.Column="1" Margin="12,0,0,0" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <StackPanel>
                             <!-- 应用与快捷方式 -->

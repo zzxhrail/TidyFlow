@@ -722,6 +722,19 @@ Console.WriteLine("[20.6] Unrecognized bucket");
     Check("图片不受影响，仍进图片", imageRecord.Category == "图片", imageRecord.Category);
 }
 
+// ---------- 20.7 动画开关持久化 ----------
+Console.WriteLine("[20.7] Animations setting");
+{
+    var home = NewTempDir();
+    var settings = new ArchiveSettings();
+    Check("默认开启动画", settings.AnimationsEnabled);
+    settings.AnimationsEnabled = false;
+    settings.Save();
+
+    var reloaded = new ArchiveSettings();
+    Check("关掉后能持久化", !reloaded.AnimationsEnabled);
+}
+
 // ---------- 21. 内容分类准确率 ----------
 Console.WriteLine("[21] Classifier accuracy");
 {

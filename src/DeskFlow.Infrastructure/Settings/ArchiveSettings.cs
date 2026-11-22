@@ -37,6 +37,7 @@ public sealed class ArchiveSettings
         ContentClassification = _store.Get("archive.content-ai", true);
         SpacePreviewEnabled = _store.Get("panel.space-preview", true);
         UnrecognizedBucket = _store.Get("archive.unrecognized-bucket", true);
+        AnimationsEnabled = _store.Get("ui.animations", true);
         PanelPinned = _store.Get("panel.pinned", false);
         DiscoveryRoots = _store.Get("discovery.roots", new List<string>()) ?? new List<string>();
         GlobalWatchEnabled = _store.Get("watch.global.enabled", false);
@@ -78,6 +79,9 @@ public sealed class ArchiveSettings
 
     /// <summary>内容分类判不出来时，文档类文件进「未识别」，而不是退回扩展名类别。</summary>
     public bool UnrecognizedBucket { get; set; } = true;
+
+    /// <summary>界面动画（淡入 / 滑入 / 勾选框弹出）。关掉 = 全部瞬切。</summary>
+    public bool AnimationsEnabled { get; set; } = true;
 
     /// <summary>是否"顶住"：顶住后面板不能被拖动（位置锁死），但点按交互照常。</summary>
     public bool PanelPinned { get; set; }
@@ -130,6 +134,7 @@ public sealed class ArchiveSettings
         _store.Set("archive.content-ai", ContentClassification);
         _store.Set("panel.space-preview", SpacePreviewEnabled);
         _store.Set("archive.unrecognized-bucket", UnrecognizedBucket);
+        _store.Set("ui.animations", AnimationsEnabled);
         _store.Set("panel.pinned", PanelPinned);
         _store.Set("discovery.roots", DiscoveryRoots);
         _store.Set("watch.global.enabled", GlobalWatchEnabled);

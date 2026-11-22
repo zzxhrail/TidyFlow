@@ -29,6 +29,8 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
         InitializeComponent();
+
+        Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;
@@ -40,6 +42,7 @@ public partial class SettingsWindow : Window
         ContentAiCheck.IsChecked = settings.ContentClassification;
         SpacePreviewCheck.IsChecked = settings.SpacePreviewEnabled;
         UnrecognizedCheck.IsChecked = settings.UnrecognizedBucket;
+        AnimationsCheck.IsChecked = settings.AnimationsEnabled;
 
         RefreshWatchList();
         RefreshCategories();
@@ -446,6 +449,8 @@ public partial class SettingsWindow : Window
         _settings.ContentClassification = ContentAiCheck.IsChecked == true;
         _settings.SpacePreviewEnabled = SpacePreviewCheck.IsChecked == true;
         _settings.UnrecognizedBucket = UnrecognizedCheck.IsChecked == true;
+        _settings.AnimationsEnabled = AnimationsCheck.IsChecked == true;
+        Services.Animations.Enabled = _settings.AnimationsEnabled;
 
         _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
         _settings.GlobalRoots = CurrentGlobalRoots();

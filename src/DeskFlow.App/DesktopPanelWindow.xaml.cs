@@ -92,7 +92,11 @@ public partial class DesktopPanelWindow : Window
         AddHandler(DragDrop.DragOverEvent, new DragEventHandler(Panel_DragOver), handledEventsToo: true);
         AddHandler(DragDrop.DragLeaveEvent, new DragEventHandler(Panel_DragLeave), handledEventsToo: true);
         AddHandler(DragDrop.DropEvent, new DragEventHandler(Panel_Drop), handledEventsToo: true);
-        Loaded += (_, _) => InstallSpacePreviewHook();
+        Loaded += (_, _) =>
+        {
+            InstallSpacePreviewHook();
+            Animations.FadeSlideIn(Root, offsetY: 10, milliseconds: 200);
+        };
         Closed += (_, _) => UninstallSpacePreviewHook();
         LocationChanged += OnLocationChanged;
     }
@@ -585,6 +589,18 @@ public partial class DesktopPanelWindow : Window
         UpdatePendingSummary(count == 0 ? "暂无待接收文件" : null);
     }
 
+    /// <summary>切换分区/分类时给内容区一个 8px 的滑入，观感更连贯（不做布局动画，只动合成层）。</summary>
+    private void AnimateContent()
+    {
+        if (ContentHost is null)
+        {
+            return;
+        }
+
+        var target = ContentHost as UIElement;
+        Animations.FadeSlideIn(target, offsetY: 8, milliseconds: 170);
+    }
+
     private void UpdatePendingSummary(string? hint = null)
     {
         if (PendingSummary is null)
@@ -669,6 +685,7 @@ public partial class DesktopPanelWindow : Window
         if (CategoryNav.SelectedItem is PanelViewModel.NavEntry { Kind: "category" } entry)
         {
             _viewModel.OpenCategory(entry.Key, entry.Title);
+            AnimateContent();
         }
     }
 
@@ -691,6 +708,7 @@ public partial class DesktopPanelWindow : Window
             case "group" when entry.Key == "categories":
                 // 「分类」点了不是展开，而是进二级页
                 _viewModel.OpenCategoryNav();
+        AnimateContent();
                 CategoryNav.SelectedItem = null;
                 break;
             case "category":
@@ -743,7 +761,7 @@ public partial class DesktopPanelWindow : Window
         {
             if (tile.Kind == TileKind.Browse)
             {
-                menu.Items.Add(MenuItemFor("打开分类", () => _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title)));
+                menu.Items.Add(MenuItemFor("打开分类", () => { _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title); AnimateContent(); }));
             }
             else
             {

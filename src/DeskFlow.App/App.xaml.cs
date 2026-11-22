@@ -228,6 +228,7 @@ public partial class App : Application
         try
         {
             Settings = new ArchiveSettings();
+            Services.Animations.Enabled = Settings.AnimationsEnabled;
             Categories = new CategoryCatalog(
                 Settings.UserCategories
                     .Where(static c => c.Length > 0)

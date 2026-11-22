@@ -62,6 +62,8 @@ public partial class ScanWindow : Window
     public ScanWindow(PanelViewModel viewModel)
     {
         InitializeComponent();
+
+        Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         _viewModel = viewModel;
 
