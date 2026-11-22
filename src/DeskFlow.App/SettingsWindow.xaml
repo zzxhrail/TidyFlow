@@ -116,6 +116,49 @@
             </Grid>
         </TabItem>
 
+        <!-- 5. 全局监听 -->
+        <TabItem Header="全局监听">
+            <Grid Margin="14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <CheckBox x:Name="GlobalWatchCheck" Content="开启全局监听（整机任意目录只要落盘就收）"
+                          FontWeight="SemiBold" />
+                <TextBlock Grid.Row="1" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#8A5A00" Background="#FFF4E5"
+                           Padding="10,8" Text="注意：命中的文件会被**移动**到归档目录，原位置不再保留副本。系统目录（Windows / Program Files / AppData / 回收站等）与归档目录本身不会被监听。" />
+
+                <Grid Grid.Row="2" Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="文件类型" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBox x:Name="GlobalExtBox" Grid.Column="1" Padding="8,6"
+                             ToolTip="空格或逗号分隔，例如：.docx .pdf .xlsx .zip（留空 = 用默认的文档/图片/压缩包）" />
+                </Grid>
+
+                <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                    <TextBlock Text="监听的根目录（默认所有固定硬盘）" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <ListBox x:Name="GlobalRootsList" Height="150" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Content="添加目录…" Click="AddGlobalRoot_Click" />
+                    <Button Content="移除选中" Click="RemoveGlobalRoot_Click" />
+                    <Button Content="恢复默认（全部硬盘）" Click="ResetGlobalRoots_Click" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="5" Margin="0,10,0,0" Foreground="#8A8F99" FontSize="11.5" TextWrapping="Wrap"
+                           Text="命中后的动作：弹右下角提示 → 按类别移动到归档目录 → 删除原文件。与你手动改的聊天工具目录监听互不重复。" />
+            </Grid>
+        </TabItem>
+
         <!-- 4. 快捷方式 -->
         <TabItem Header="面板快捷方式">
             <Grid Margin="14">

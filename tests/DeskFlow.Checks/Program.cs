@@ -408,6 +408,33 @@ Console.WriteLine("[13] SourceDirectoryResolver");
     Check("Emoji 目录被判定为噪声", IncomingWatcher.IsNoise(Path.Combine(qqData, "Emoji", "x.gif"), qqData));
 }
 
+
+// ---------- 14. 全局监听过滤 ----------
+Console.WriteLine("[14] GlobalWatchFilter");
+{
+    var options = new GlobalWatchOptions
+    {
+        Enabled = true,
+        Roots = [@"D:\watch"],
+        Extensions = new HashSet<string>([".docx", ".pdf"], StringComparer.OrdinalIgnoreCase),
+        ExcludedPaths = [@"D:\archive"],
+    };
+
+    Check("docx 命中", GlobalWatchFilter.ShouldWatch(@"D:\watch\a.docx", options, 100, FileAttributes.Normal));
+    Check("未选类型不命中", !GlobalWatchFilter.ShouldWatch(@"D:\watch\a.exe", options, 100, FileAttributes.Normal));
+    Check("系统目录不命中", !GlobalWatchFilter.ShouldWatch(@"C:\Windows\a.docx", options, 100, FileAttributes.Normal));
+    Check("AppData 不命中", !GlobalWatchFilter.ShouldWatch(@"C:\Users\x\AppData\Roaming\a.docx", options, 100, FileAttributes.Normal));
+    Check("归档目录不命中", !GlobalWatchFilter.ShouldWatch(@"D:\archive\a.docx", options, 100, FileAttributes.Normal));
+    Check("Word 临时文件不命中", !GlobalWatchFilter.ShouldWatch(@"D:\watch\~$a.docx", options, 100, FileAttributes.Normal));
+    Check("0 字节不命中", !GlobalWatchFilter.ShouldWatch(@"D:\watch\a.docx", options, 0, FileAttributes.Normal));
+    Check("隐藏文件不命中", !GlobalWatchFilter.ShouldWatch(@"D:\watch\a.docx", options, 100, FileAttributes.Hidden));
+    Check("关闭时不命中", !GlobalWatchFilter.ShouldWatch(@"D:\watch\a.docx",
+        new GlobalWatchOptions { Enabled = false, Extensions = options.Extensions }, 100, FileAttributes.Normal));
+    Check("IsUnder 子树判定", GlobalWatchFilter.IsUnder(@"D:\archive\2026\x.txt", @"D:\archive"));
+    Check("IsUnder 不误判同前缀", !GlobalWatchFilter.IsUnder(@"D:\archive2\x.txt", @"D:\archive"));
+    Check("默认类型含 docx/pdf", GlobalWatchFilter.DefaultExtensions.Contains(".docx") && GlobalWatchFilter.DefaultExtensions.Contains(".pdf"));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0
     ? $"全部通过：{checks} 项检查"

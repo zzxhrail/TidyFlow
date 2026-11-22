@@ -29,7 +29,63 @@ public partial class SettingsWindow : Window
         RefreshWatchList();
         RefreshCategories();
         RefreshShortcuts();
+        LoadGlobalWatch();
+        LoadGlobalWatch();
     }
+
+    private void LoadGlobalWatch()
+    {
+        GlobalWatchCheck.IsChecked = _settings.GlobalWatchEnabled;
+        GlobalExtBox.Text = string.Join(' ', _settings.GlobalExtensions.Count > 0
+            ? _settings.GlobalExtensions
+            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions);
+
+        var roots = _settings.GlobalRoots.Count > 0
+            ? _settings.GlobalRoots
+            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots;
+        GlobalRootsList.ItemsSource = new List<string>(roots);
+    }
+
+    private List<string> CurrentGlobalRoots() =>
+        GlobalRootsList.Items.Cast<string>().Where(static r => !string.IsNullOrWhiteSpace(r)).ToList();
+
+    private void AddGlobalRoot_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "选择要监听的目录或盘符" };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var roots = CurrentGlobalRoots();
+        if (!roots.Contains(dialog.FolderName, StringComparer.OrdinalIgnoreCase))
+        {
+            roots.Add(dialog.FolderName);
+            GlobalRootsList.ItemsSource = roots;
+        }
+    }
+
+    private void RemoveGlobalRoot_Click(object sender, RoutedEventArgs e)
+    {
+        if (GlobalRootsList.SelectedItem is not string selected)
+        {
+            return;
+        }
+
+        var roots = CurrentGlobalRoots();
+        roots.RemoveAll(r => string.Equals(r, selected, StringComparison.OrdinalIgnoreCase));
+        GlobalRootsList.ItemsSource = roots;
+    }
+
+    private void ResetGlobalRoots_Click(object sender, RoutedEventArgs e) =>
+        GlobalRootsList.ItemsSource = new List<string>(DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots);
+
+    private List<string> GlobalExtensionsFromText(string? raw) =>
+        (raw ?? string.Empty)
+            .Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(static e => e.StartsWith('.') ? e : "." + e)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private async void RefreshWatchList()
     {
@@ -243,9 +299,19 @@ public partial class SettingsWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _settings.MoveInsteadOfCopy = MoveCheck.IsChecked == true;
+
+        _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
+        _settings.GlobalRoots = CurrentGlobalRoots();
+        _settings.GlobalExtensions = GlobalExtensionsFromText(GlobalExtBox.Text);
         _settings.Save();
+
+        // 全局监听配置变了就立即按新配置重开，不用重启程序
+        _viewModel.RestartGlobalWatch();
+
         base.OnClosed(e);
     }
+
+
 
     /// <summary>ListBox 里一行文本 + 隐藏的真实值，避免界面上解析字符串。</summary>
     private sealed record ListRow(string Display, string Value)

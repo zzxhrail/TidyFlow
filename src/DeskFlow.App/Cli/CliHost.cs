@@ -16,7 +16,7 @@ namespace DeskFlow.App.Cli;
 public static class CliHost
 {
     public static bool IsCliInvocation(string[] args) =>
-        args.Any(a => a is "--run" or "-r" or "--help" or "-h" or "--steps" or "--diagnose" or "--selftest");
+        args.Any(a => a is "--run" or "-r" or "--help" or "-h" or "--steps" or "--diagnose" or "--selftest" or "--fswtest" or "--toasttest");
 
     public static int Run(string[] args)
     {
@@ -35,6 +35,19 @@ public static class CliHost
     private static int RunCore(string[] args)
     {
         var options = Parse(args);
+
+        if (args.Any(static a => a is "--toasttest"))
+        {
+            Services.ToastService.Show("DeskFlow 提示测试", "这是一条测试通知，点击可打开文件");
+            System.Threading.Thread.Sleep(4000);
+            ConsoleAttach.Detach();
+            return 0;
+        }
+
+        if (args.Any(static a => a is "--fswtest"))
+        {
+            return FswTest(args);
+        }
 
         if (args.Any(static a => a is "--diagnose" or "--selftest"))
         {
@@ -124,6 +137,48 @@ public static class CliHost
     /// 监听诊断：把每个被监听目录的"存在性 / 最近 24h 非噪声新文件数 / 最新文件名"打出来。
     /// 用来区分"软件没监听到"和"客户端根本没落盘"。
     /// </summary>
+    /// <summary>诊断用：在指定目录挂 FileSystemWatcher，造一个文件，看事件能不能到（排查盘符/权限问题）。</summary>
+    private static int FswTest(string[] args)
+    {
+        var dir = args.SkipWhile(a => a != "--fswtest").Skip(1).FirstOrDefault()
+            ?? Path.Combine(Path.GetTempPath(), "deskflow-fswtest");
+        Directory.CreateDirectory(dir);
+
+        var hits = 0;
+        using var watcher = new GlobalFileWatcher();
+        watcher.FileDetected += path =>
+        {
+            Interlocked.Increment(ref hits);
+            Console.WriteLine("detected: " + path);
+        };
+
+        watcher.Start(new GlobalWatchOptions
+        {
+            Enabled = true,
+            Roots = [dir],
+            Extensions = new HashSet<string>([".docx"], StringComparer.OrdinalIgnoreCase),
+        });
+
+        var probe = Path.Combine(dir, "probe-" + Guid.NewGuid().ToString("N")[..6] + ".docx");
+        File.WriteAllText(probe, "probe");
+        Thread.Sleep(3000);
+
+        var line = $"{DateTime.Now:HH:mm:ss} dir={dir} roots={string.Join(",", watcher.ActiveRoots)} detected={hits}";
+        Console.WriteLine(line);
+        try
+        {
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "deskflow-fsw.log"), line + Environment.NewLine);
+        }
+        catch (IOException)
+        {
+        }
+
+        try { File.Delete(probe); } catch { }
+        watcher.Stop();
+        ConsoleAttach.Detach();
+        return hits > 0 ? 0 : 3;
+    }
+
     private static int RunDiagnose()
     {
         var settings = new ArchiveSettings();

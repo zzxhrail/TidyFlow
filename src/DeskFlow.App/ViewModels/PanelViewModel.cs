@@ -24,6 +24,7 @@ public sealed class PanelViewModel : ObservableObject
     private readonly CategoryCatalog _categories;
     private readonly FileArchiver _archiver;
     private IncomingWatcher? _watcher;
+    private GlobalFileWatcher? _globalWatcher;
     private string _status = "就绪";
     private string _archiveRoot;
     private int _pendingCount;
@@ -212,6 +213,133 @@ public sealed class PanelViewModel : ObservableObject
     {
         _watcher?.Dispose();
         _watcher = null;
+    }
+
+    /// <summary>
+    /// 全局监听：整机任意目录落盘就搬走。默认关闭，用户勾选后才启动。
+    /// 排除项里塞了聊天工具目录、归档根、配置目录，避免重复归档与自噬。
+    /// </summary>
+    public void StartGlobalWatch()
+    {
+        Services.Diagnostics.Log($"global watch start enabled={_settings.GlobalWatchEnabled} roots={_settings.GlobalRoots.Count} ext={_settings.GlobalExtensions.Count}");
+        StopGlobalWatch();
+
+        var options = GlobalWatchOptionsFactory.Build(
+            _settings,
+            installDirectory: Path.GetDirectoryName(Environment.ProcessPath),
+            extraExcluded: BuildTargets().Select(static t => t.Directory));
+
+        if (!options.Enabled)
+        {
+            Log("全局监听：未开启");
+            return;
+        }
+
+        _globalWatcher = new GlobalFileWatcher();
+        _globalWatcher.FileDetected += path => OnUi(() => _ = HandleGlobalFileAsync(path));
+        _globalWatcher.Start(options);
+
+        Log($"全局监听：{options.Roots.Count} 个根目录，{options.Extensions.Count} 种类型，命中即移动归档");
+        Services.Diagnostics.Log($"global watch roots=[{string.Join(",", options.Roots)}] ext=[{string.Join(",", options.Extensions)}]");
+    }
+
+    public void StopGlobalWatch()
+    {
+        _globalWatcher?.Dispose();
+        _globalWatcher = null;
+    }
+
+    public void RestartGlobalWatch()
+    {
+        StartGlobalWatch();
+    }
+
+    /// <summary>全局监听命中：先弹提示，再移动归档（原文件会被移走，不留副本）。</summary>
+    private async Task HandleGlobalFileAsync(string path)
+    {
+        try
+        {
+            if (!File.Exists(path) || _index.KnowsSourcePath(path))
+            {
+                return;
+            }
+
+            var info = new FileInfo(path);
+            var category = _categories.Resolve(info.Name);
+            var record = new FileRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                SourcePath = info.FullName,
+                FileName = info.Name,
+                SizeBytes = info.Length,
+                Source = FileSource.Global,
+                Category = category.Name,
+            };
+
+            ToastService.Show("发现新文件，正在归档", $"{info.Name} → {category.Name}", info.FullName);
+
+            var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
+            {
+                ArchiveRoot = _settings.ArchiveRoot,
+                MoveInsteadOfCopy = true,
+                SkipDuplicates = true,
+            });
+
+            _index.Upsert(outcome.Record);
+
+            if (outcome.Duplicate)
+            {
+                // 归档里已有同内容文件：按"移动"的语义把散落的那份删掉
+                TryDelete(path);
+                ToastService.Show("已存在相同文件，原件已删除", info.Name, outcome.Record.ArchivedPath);
+                Log($"全局：{info.Name} 与已有文件重复，已删除原件");
+            }
+            else if (outcome.Success)
+            {
+                ToastService.Show($"已归档到「{record.Category}」", $"{info.Name}（原位置已移走）", record.ArchivedPath);
+                Log($"全局：{info.Name} → {record.Category}");
+            }
+            else
+            {
+                ToastService.Show("归档失败", $"{info.Name}：{outcome.Error}", info.FullName);
+                Log($"全局：{info.Name} 归档失败 {outcome.Error}");
+            }
+
+            BuildRecent();
+            BuildCategories();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log($"全局：处理 {path} 失败 {ex.Message}");
+        }
+    }
+
+    private void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log($"全局：删除原件失败 {Path.GetFileName(path)} {ex.Message}");
+        }
+    }
+
+    private static void OnUi(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            _ = dispatcher.BeginInvoke(action);
+        }
     }
 
     /// <summary>补捞最近一段时间内、索引里还没有的文件（覆盖"软件没开着的时候收到的文件"）。</summary>

@@ -35,6 +35,9 @@ public sealed class ArchiveSettings
         PanelHeight = _store.Get("panel.height", 0);
         PanelPinned = _store.Get("panel.pinned", false);
         DiscoveryRoots = _store.Get("discovery.roots", new List<string>()) ?? new List<string>();
+        GlobalWatchEnabled = _store.Get("watch.global.enabled", false);
+        GlobalRoots = _store.Get("watch.global.roots", new List<string>()) ?? new List<string>();
+        GlobalExtensions = _store.Get("watch.global.extensions", new List<string>()) ?? new List<string>();
     }
 
     public string ArchiveRoot { get; set; }
@@ -65,6 +68,13 @@ public sealed class ArchiveSettings
 
     /// <summary>兜底扫描找到的客户端数据根目录（深盘、改过保存路径的情况）。</summary>
     public List<string> DiscoveryRoots { get; set; }
+
+    /// <summary>全局监听：整机任意目录落盘即收（按扩展名筛选）。</summary>
+    public bool GlobalWatchEnabled { get; set; }
+
+    public List<string> GlobalRoots { get; set; }
+
+    public List<string> GlobalExtensions { get; set; }
 
     public bool IsAutoDownload(FileSource source) =>
         AutoDownload.TryGetValue(source.Key(), out var value) && value;
@@ -102,6 +112,9 @@ public sealed class ArchiveSettings
         _store.Set("panel.height", PanelHeight);
         _store.Set("panel.pinned", PanelPinned);
         _store.Set("discovery.roots", DiscoveryRoots);
+        _store.Set("watch.global.enabled", GlobalWatchEnabled);
+        _store.Set("watch.global.roots", GlobalRoots);
+        _store.Set("watch.global.extensions", GlobalExtensions);
         _store.Flush();
     }
 }
