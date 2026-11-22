@@ -4,7 +4,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="DeskFlow 面板" Width="376" Height="640" MinWidth="280" MinHeight="180"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="True" Topmost="False"
-        Background="#FF202020"
+        Background="#FF202020" AllowDrop="True" DragOver="Panel_DragOver" DragLeave="Panel_DragLeave" Drop="Panel_Drop"
         FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" TextOptions.TextFormattingMode="Display">
 
     <shell:WindowChrome.WindowChrome>
@@ -135,6 +135,8 @@
                         <TextBlock Text="分类" Style="{StaticResource SectionHeader}" />
                         <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource TileTemplate}"
                                       ItemsPanel="{StaticResource TilePanel}" />
+                        <TextBlock Text="把文件拖到分类上即可收录；按住 Shift 拖 = 移动，直接拖 = 复制"
+                                   Style="{StaticResource Muted}" Margin="2,4,0,0" TextWrapping="Wrap" />
 
                         <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
                                 Padding="14,12" Margin="0,16,0,0">

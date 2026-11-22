@@ -868,6 +868,85 @@ public sealed class PanelViewModel : ObservableObject
         return done;
     }
 
+    /// <summary>
+    /// 把手动拖进面板的文件归档到指定类别（categoryName 为空则按扩展名自动分类）。
+    /// 默认复制；按住 Shift 拖拽 = 移动（和资源管理器一致）。返回成功数量。
+    /// </summary>
+    public async Task<int> ImportDroppedAsync(IReadOnlyList<string> paths, string? categoryName, bool move)
+    {
+        var archiveRoot = _settings.ArchiveRoot;
+        Directory.CreateDirectory(archiveRoot);
+
+        var files = new List<string>();
+        foreach (var path in paths)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    files.Add(path);
+                }
+                else if (Directory.Exists(path))
+                {
+                    files.AddRange(Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly).Take(50));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log("拖入的路径读不了：" + path);
+            }
+        }
+
+        if (files.Count == 0)
+        {
+            Log("拖进来的是空列表或不能读的目录");
+            return 0;
+        }
+
+        var done = 0;
+        foreach (var file in files)
+        {
+            var record = new FileRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                SourcePath = file,
+                FileName = Path.GetFileName(file),
+                SizeBytes = new FileInfo(file).Length,
+                Source = FileSource.Manual,
+                Category = categoryName ?? "其他",
+                DetectedAt = DateTimeOffset.Now,
+                Status = ArchiveStatus.Pending,
+            };
+
+            var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
+            {
+                ArchiveRoot = archiveRoot,
+                MoveInsteadOfCopy = move,
+                CategoryOverride = categoryName,
+            });
+
+            _index.Upsert(outcome.Record);
+
+            if (outcome.Success)
+            {
+                done++;
+                _archiveLog.Archive(record.FileName, record.Category, "拖入", record.SourcePath, record.ArchivedPath ?? string.Empty);
+            }
+            else
+            {
+                Log($"拖入失败 {record.FileName}: {outcome.Error}");
+            }
+        }
+
+        BuildRecent();
+        BuildCategories();
+
+        var where = string.IsNullOrWhiteSpace(categoryName) ? "自动分类" : $"「{categoryName}」";
+        ToastService.Show($"已收录 {done} 个文件", $"放进了 {where}（{(move ? "移动" : "复制")}）", archiveRoot);
+        Log($"拖入归档 {done}/{files.Count} 个文件 → {where}");
+        return done;
+    }
+
     /// <summary>按记录 id 撤销（面板右键用）。</summary>
     public async Task<bool> UndoByIdAsync(string recordId)
     {

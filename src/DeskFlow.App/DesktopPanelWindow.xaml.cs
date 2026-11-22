@@ -437,6 +437,87 @@ public partial class DesktopPanelWindow : Window
         e.Handled = true;
     }
 
+    // 拖拽入面板：落到哪个分类就归档进哪个分类
+    private Button? _dropTarget;
+    private Brush? _dropTargetBrush;
+
+    private void Panel_DragOver(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        // 和资源管理器一致：默认复制，按住 Shift 才是移动
+        e.Effects = (e.KeyStates & DragDropKeyStates.ShiftKey) != 0
+            ? DragDropEffects.Move
+            : DragDropEffects.Copy;
+
+        var tileButton = FindTileButton(e.OriginalSource as DependencyObject);
+        if (!ReferenceEquals(tileButton, _dropTarget))
+        {
+            RestoreDropTarget();
+            _dropTarget = tileButton;
+            if (_dropTarget is not null)
+            {
+                _dropTargetBrush = _dropTarget.Background;
+                _dropTarget.Background = new SolidColorBrush(Color.FromArgb(0x30, 0x60, 0xCD, 0xFF));
+            }
+        }
+
+        e.Handled = true;
+    }
+
+    private void Panel_DragLeave(object sender, DragEventArgs e)
+    {
+        RestoreDropTarget();
+        e.Handled = true;
+    }
+
+    private void Panel_Drop(object sender, DragEventArgs e)
+    {
+        RestoreDropTarget();
+
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
+        {
+            return;
+        }
+
+        var tile = FindTileButton(e.OriginalSource as DependencyObject)?.Tag as PanelTile;
+        var category = tile is { Kind: TileKind.Browse } ? tile.Title : null;
+        var move = (e.KeyStates & DragDropKeyStates.ShiftKey) != 0;
+
+        _ = _viewModel.ImportDroppedAsync(paths, category, move);
+        e.Handled = true;
+    }
+
+    private void RestoreDropTarget()
+    {
+        if (_dropTarget is not null)
+        {
+            _dropTarget.Background = _dropTargetBrush;
+            _dropTarget = null;
+            _dropTargetBrush = null;
+        }
+    }
+
+    private static Button? FindTileButton(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is Button button && button.Tag is PanelTile)
+            {
+                return button;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
     private async Task UndoFromPanelAsync(string recordId, string fileName)
     {
         var confirm = MessageBox.Show(

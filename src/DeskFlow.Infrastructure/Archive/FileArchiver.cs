@@ -27,10 +27,13 @@ public sealed class FileArchiver
                 return ArchiveOutcome.Failed(record, record.Error);
             }
 
-            var category = _categories.Resolve(record.FileName);
-            record.Category = category.Name;
+            // 拖拽到某个分类上时用强制类别，否则按扩展名自动分类
+            var categoryName = string.IsNullOrWhiteSpace(options.CategoryOverride)
+                ? _categories.Resolve(record.FileName).Name
+                : options.CategoryOverride!;
+            record.Category = categoryName;
 
-            var categoryDirectory = Path.Combine(options.ArchiveRoot, SanitizeFolderName(category.Name));
+            var categoryDirectory = Path.Combine(options.ArchiveRoot, SanitizeFolderName(categoryName));
             Directory.CreateDirectory(categoryDirectory);
 
             var targetPath = Path.Combine(categoryDirectory, record.FileName);
