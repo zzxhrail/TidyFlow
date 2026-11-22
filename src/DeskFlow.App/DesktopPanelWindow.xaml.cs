@@ -97,6 +97,24 @@ public partial class DesktopPanelWindow : Window
         Loaded += (_, _) =>
         {
             InstallSpacePreviewHook();
+
+            // 自动化测试钩子：按拖放分流的同一套规则处理给定路径（仅回归验证用）
+            var autoDrop = Environment.GetEnvironmentVariable("DESKFLOW_AUTODROP");
+            if (!string.IsNullOrWhiteSpace(autoDrop))
+            {
+                var dropped = autoDrop.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var autoShortcuts = dropped.Where(PanelViewModel.IsShortcutFile).ToArray();
+                var autoFiles = dropped.Where(p => !PanelViewModel.IsShortcutFile(p)).ToArray();
+                if (autoShortcuts.Length > 0)
+                {
+                    _viewModel.AddShortcuts(autoShortcuts);
+                }
+
+                if (autoFiles.Length > 0)
+                {
+                    _ = _viewModel.ImportDroppedAsync(autoFiles, null, false);
+                }
+            }
             Animations.FadeSlideIn(Root, offsetY: 10, milliseconds: 200);
         };
         Closed += (_, _) => UninstallSpacePreviewHook();
@@ -1118,7 +1136,19 @@ public partial class DesktopPanelWindow : Window
         var move = (e.KeyStates & DragDropKeyStates.ShiftKey) != 0;
         Services.Diagnostics.Log($"drop: paths={paths.Length} tile={tile?.Kind.ToString() ?? "none"} category={category ?? "(auto)"} move={move}");
 
-        _ = _viewModel.ImportDroppedAsync(paths, category, move);
+        // .lnk / .url 拖进来 = 添加面板快捷方式，不归档、不分类
+        var shortcutPaths = paths.Where(PanelViewModel.IsShortcutFile).ToArray();
+        var filePaths = paths.Where(p => !PanelViewModel.IsShortcutFile(p)).ToArray();
+
+        if (shortcutPaths.Length > 0)
+        {
+            _viewModel.AddShortcuts(shortcutPaths);
+        }
+
+        if (filePaths.Length > 0)
+        {
+            _ = _viewModel.ImportDroppedAsync(filePaths, category, move);
+        }
         e.Handled = true;
     }
 

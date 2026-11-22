@@ -731,3 +731,18 @@ System.InvalidOperationException: Transform is not valid for Window.
 - 只隐藏「标题以下的分区」（`Grid.Row > 0` 的行），标题栏始终保留；
 - 收起前先把 `MinHeight` 放到 92，再设高度，收起后是一条 92px 的标题条；
 - 展开时恢复原高度并把 `MinHeight` 复位到 380，随后强制重排/重绘一次，内容立刻回来。
+
+
+## 拖进来的快捷方式不归档（0.9.7）
+
+把 **.lnk / .url** 拖到面板上（应用与快捷方式区域或任意位置），它不会像普通文件那样被分类归档，而是**直接变成面板上的快捷方式图标**：
+
+| 拖入内容 | 结果 |
+| --- | --- |
+| `.lnk` / `.url` | 登记为面板快捷方式（名字取文件名去掉扩展名），归档目录**一个文件都不增加** |
+| 普通文件 | 照旧按落点分类归档 |
+| 混合拖入 | 快捷方式进面板，其余文件归档 |
+
+实现上先按扩展名分流（`ShortcutKinds.IsShortcut`），快捷方式走 `ShortcutRegistry.Add`（去重、写 `panel.shortcuts`），其余文件走 `ImportDroppedAsync`。
+
+> 调试钩子：设置环境变量 `DESKFLOW_AUTODROP="路径1|路径2"` 后启动，面板会按同一套分流规则处理这些路径，用于回归验证。

@@ -795,6 +795,23 @@ public sealed class PanelViewModel : ObservableObject
     public int PendingSelectedCount => PendingFiles.Count(static t => t.IsSelected);
 
     /// <summary>批量接收：挨个走和单条相同的归档流程。</summary>
+    /// <summary>是否属于「快捷方式」类文件：这类拖进来只登记成面板快捷方式，不当文件归档。</summary>
+    public static bool IsShortcutFile(string path) => DeskFlow.Core.Files.ShortcutKinds.IsShortcut(path);
+
+    /// <summary>把 .lnk/.url 直接登记成面板快捷方式（不复制、不分类、不进归档目录）。</summary>
+    public int AddShortcuts(IEnumerable<string> paths)
+    {
+        var added = DeskFlow.Infrastructure.Settings.ShortcutRegistry.Add(_settings, paths);
+        if (added > 0)
+        {
+            BuildShortcuts();
+            RaiseConfirmed($"已添加 {added} 个快捷方式");
+            Log($"拖入 {added} 个快捷方式（.lnk 不归档，只放到面板）");
+        }
+
+        return added;
+    }
+
     public async Task<int> AcceptSelectedPendingAsync()
     {
         var selected = PendingFiles.Where(static t => t.IsSelected).ToList();

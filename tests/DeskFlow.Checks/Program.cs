@@ -752,6 +752,24 @@ Console.WriteLine("[20.8] User categories");
     Check("内置分类不能被删", !catalog.RemoveUserCategory("图片"));
 }
 
+// ---------- 20.9 快捷方式不参与归档 ----------
+Console.WriteLine("[20.9] Shortcut drops");
+{
+    Check(".lnk 识别为快捷方式", DeskFlow.Core.Files.ShortcutKinds.IsShortcut(@"C:\a\b.lnk"));
+    Check(".url 识别为快捷方式", DeskFlow.Core.Files.ShortcutKinds.IsShortcut(@"C:\a\b.URL"));
+    Check("普通文件不是快捷方式", !DeskFlow.Core.Files.ShortcutKinds.IsShortcut(@"C:\a\b.docx"));
+    Check("无扩展名不是快捷方式", !DeskFlow.Core.Files.ShortcutKinds.IsShortcut(@"C:\a\b"));
+
+    var lnk = Path.Combine(NewTempDir(), "我的快捷方式.lnk");
+    await File.WriteAllTextAsync(lnk, "fake");
+    var settings = new ArchiveSettings();
+    settings.Shortcuts.Clear();
+    var added = DeskFlow.Infrastructure.Settings.ShortcutRegistry.Add(settings, [lnk], save: false);
+    Check("登记快捷方式成功", added == 1, added.ToString());
+    Check("名称去掉扩展名", settings.Shortcuts[0].Name == "我的快捷方式", settings.Shortcuts[0].Name);
+    Check("重复添加会跳过", DeskFlow.Infrastructure.Settings.ShortcutRegistry.Add(settings, [lnk], save: false) == 0);
+}
+
 // ---------- 21. 内容分类准确率 ----------
 Console.WriteLine("[21] Classifier accuracy");
 {
