@@ -1289,6 +1289,50 @@ public sealed class PanelViewModel : ObservableObject
     }
 
     /// <summary>删除归档文件（进回收站），记录标记为已删除。</summary>
+    /// <summary>把选中的归档文件删到回收站，并把对应记录标记为已删除。</summary>
+    public int DeleteArchivedFiles(IEnumerable<string> paths)
+    {
+        var removed = 0;
+        foreach (var path in paths)
+        {
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            if (!DeskFlow.Infrastructure.Services.RecycleBin.TryDelete(path))
+            {
+                Log($"删除失败 {Path.GetFileName(path)}");
+                continue;
+            }
+
+            removed++;
+
+            var record = _index.All.FirstOrDefault(r =>
+                string.Equals(r.ArchivedPath, path, StringComparison.OrdinalIgnoreCase));
+            if (record is not null)
+            {
+                record.Status = ArchiveStatus.Deleted;
+                _index.Upsert(record);
+            }
+        }
+
+        if (removed > 0)
+        {
+            RaiseConfirmed($"已删除 {removed} 个文件（回收站）");
+            Log($"删除 {removed} 个归档文件（回收站）");
+            if (IsBrowsing && !string.IsNullOrEmpty(_browsePath))
+            {
+                OpenCategory(_browsePath, BrowseTitle);
+            }
+
+            BuildRecent();
+            BuildCategories();
+        }
+
+        return removed;
+    }
+
     public bool DeleteById(string recordId)
     {
         var record = _index.All.FirstOrDefault(r => r.Id == recordId);

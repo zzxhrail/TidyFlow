@@ -1064,6 +1064,62 @@ public partial class DesktopPanelWindow : Window
     private void BrowseOpenFolder_Click(object sender, RoutedEventArgs e) =>
         ShellLauncher.RevealInExplorer(_viewModel.BrowsePath);
 
+    private void BrowseCheck_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;   // 只切换选中，不要顺带打开文件
+        UpdateBrowseSelection();
+    }
+
+    private void BrowseSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        var select = !_viewModel.BrowseItems.All(static item => item.IsSelected);
+        foreach (var item in _viewModel.BrowseItems)
+        {
+            item.IsSelected = select;
+        }
+
+        UpdateBrowseSelection();
+    }
+
+    private void BrowseDeleteSelected_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _viewModel.BrowseItems.Where(static item => item.IsSelected).Select(static item => item.FullPath).ToList();
+        if (selected.Count == 0)
+        {
+            MessageBox.Show(this, "先勾选要删除的文件。", "删除文件", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            "删除选中的 " + selected.Count + " 个文件？它们会进回收站，可以从回收站还原。",
+            "删除文件", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var removed = _viewModel.DeleteArchivedFiles(selected);
+        UpdateBrowseSelection();
+        if (removed == 0)
+        {
+            MessageBox.Show(this, "没能删除（文件可能已被移动或占用）。", "删除文件", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void UpdateBrowseSelection()
+    {
+        if (BrowseSelectAllButton is null || BrowseDeleteButton is null)
+        {
+            return;
+        }
+
+        var total = _viewModel.BrowseItems.Count;
+        var selected = _viewModel.BrowseItems.Count(static item => item.IsSelected);
+        BrowseSelectAllButton.Content = total > 0 && selected == total ? "取消全选" : "全选";
+        BrowseDeleteButton.Content = selected > 0 ? "删除选中（" + selected + "）" : "删除选中";
+        BrowseDeleteButton.IsEnabled = selected > 0;
+    }
+
     private void BrowseItem_Click(object sender, MouseButtonEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is BrowseItem item)
