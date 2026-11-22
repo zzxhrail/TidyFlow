@@ -990,3 +990,24 @@ CollapsedBar.Measure(宽度, 无穷高) → 内容高 + 上下留白 ≈ 99 DIP
 | 最小高度 | 88 DIP | **104 DIP**（一排 34 DIP 图标刚好放下） |
 
 ![最矮状态](docs/screenshot-collapsed-min.png)
+
+
+## 0.9.24：云母材质 + 收起条整块可点
+
+### 云母（Mica）
+
+```csharp
+DwmSetWindowAttribute(hwnd, 38, 2 /* DWMSBT_MAINWINDOW */);   // 系统背景材质
+DwmSetWindowAttribute(hwnd, 20, 1);                          // 深色模式
+DwmSetWindowAttribute(hwnd, 33, 2);                          // 圆角
+DwmExtendFrameIntoClientArea(hwnd, -1,-1,-1,-1);             // 边框延伸进客户区
+```
+
+窗口 `Background=Transparent`，Root 用半透明 `#B8141414` 压暗；启动日志会打 `mica: backdrop=0`（0 = 成功）。
+系统不支持（Win10 / 关闭透明效果）时静默回退成原来的纯深色，不会报错。
+
+### 收起条点击范围
+
+瓦片固定 **74×74**，`StackPanel` 透明底铺满 → 图标上下左右的留白区域也能双击启动，等于「整块图标」都可点。
+
+![云母](docs/screenshot-mica.png)

@@ -28,6 +28,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => Services.Mica.Apply(this);
 
         Loaded += (_, _) => Services.Animations.FadeSlideIn(this, offsetY: 6, milliseconds: 160);
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));

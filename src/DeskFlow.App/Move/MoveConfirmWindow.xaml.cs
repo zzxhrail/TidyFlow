@@ -8,6 +8,7 @@ public sealed partial class MoveConfirmWindow : Window
     public MoveConfirmWindow(string fromCategory, string toCategory, IReadOnlyList<string> fileNames)
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => Services.Mica.Apply(this);
 
         Title = $"确认移动（{fileNames.Count} 个文件）";
         TitleText.Text = $"把 {fileNames.Count} 个文件移动到「{toCategory}」？";

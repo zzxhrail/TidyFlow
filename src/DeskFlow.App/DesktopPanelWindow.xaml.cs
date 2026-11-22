@@ -89,6 +89,7 @@ public partial class DesktopPanelWindow : Window
         _proximityTimer.Start();
 
         // 空格快速预览（类似 macOS Quick Look）：鼠标悬停哪个文件，就预览哪个
+        SourceInitialized += (_, _) => Services.Mica.Apply(this);
         PreviewKeyDown += OnPanelKeyDown;
         PreviewMouseLeftButtonDown += OnWindowPreviewMouseDown;
         MouseEnter += (_, _) => ExitSliver();

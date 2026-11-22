@@ -48,7 +48,7 @@
         <!-- 收起状态的横向应用条：小图标，可横向滚动，双击启动 -->
         <DataTemplate x:Key="CollapsedTileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseDoubleClick="Tile_DoubleClick"
-                    MouseRightButtonUp="Tile_RightClick" Tag="{Binding}" Width="74" MinHeight="0" Margin="2,2,2,2"
+                    MouseRightButtonUp="Tile_RightClick" Tag="{Binding}" Width="74" Height="74" Margin="2,2,2,2"
                     HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"
                     Padding="4,2,4,2" AutomationProperties.Name="{Binding Title}"
                     ToolTip="{Binding ToolTip}">
@@ -66,7 +66,7 @@
 
     </Window.Resources>
 
-    <Border x:Name="Root" CornerRadius="8" Background="{StaticResource PanelTint}"
+    <Border x:Name="Root" CornerRadius="8" Background="#B8141414"
             BorderBrush="#1AFFFFFF" BorderThickness="1" Margin="8"
             MouseLeftButtonDown="Root_MouseDown">
         <!-- 这里故意不加 DropShadowEffect：WPF 的 Effect 会让整个窗口退回软件渲染，
