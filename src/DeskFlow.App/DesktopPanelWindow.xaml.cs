@@ -645,12 +645,20 @@ public partial class DesktopPanelWindow : Window
         menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
         menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
         menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItemFor("扫描磁盘…", OpenScanInteractive));
         menu.Items.Add(MenuItemFor("文件盘点（批处理）", OpenBatchInteractive));
         menu.PlacementTarget = sender as UIElement;
         menu.IsOpen = true;
     }
 
     private void OpenBatchInteractive() => OpenBatchWindow();
+
+    private void OpenScanInteractive()
+    {
+        var window = new Scan.ScanWindow(_viewModel) { Owner = this };
+        window.ShowDialog();
+        _viewModel.RefreshAll();
+    }
 
     /// <summary>归档记录：查看每条归档的来源，并可把文件放回原位置。</summary>
     private void OpenHistory_Click(object sender, RoutedEventArgs e)

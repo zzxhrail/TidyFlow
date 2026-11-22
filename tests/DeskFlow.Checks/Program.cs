@@ -8,6 +8,7 @@ using DeskFlow.Infrastructure;
 using DeskFlow.Infrastructure.Archive;
 using DeskFlow.Infrastructure.Index;
 using DeskFlow.Infrastructure.History;
+using DeskFlow.Infrastructure.Scan;
 using DeskFlow.Infrastructure.Services;
 using DeskFlow.Infrastructure.Inputs;
 using DeskFlow.Infrastructure.Observers;
@@ -623,6 +624,59 @@ Console.WriteLine("[19] Content classifier");
     var record2 = NewRecord(invoice, FileSource.Manual);
     await archiver.ArchiveAsync(record2, new ArchiveOptions { ArchiveRoot = archiveRoot, UseContentClassification = false });
     Check("关掉开关后按扩展名", record2.Category == "办公文档", record2.Category);
+}
+
+
+// ---------- 20. 按盘扫描 ----------
+Console.WriteLine("[20] FileScanner");
+{
+    var root = NewTempDir();
+    var docs = Path.Combine(root, "Docs");
+    var windows = Path.Combine(root, "Windows");
+    var programFiles = Path.Combine(root, "Program Files");
+    Directory.CreateDirectory(docs);
+    Directory.CreateDirectory(windows);
+    Directory.CreateDirectory(programFiles);
+
+    var fresh = Path.Combine(docs, "报告-最近.docx");
+    await File.WriteAllTextAsync(fresh, new string('x', 4096));
+    var old = Path.Combine(docs, "报告-很久以前.docx");
+    await File.WriteAllTextAsync(old, new string('x', 4096));
+    File.SetLastWriteTime(old, DateTime.Now.AddDays(-120));
+
+    var image = Path.Combine(docs, "截图.png");
+    await File.WriteAllTextAsync(image, new string('x', 4096));
+
+    var tiny = Path.Combine(docs, "空.txt");
+    await File.WriteAllTextAsync(tiny, "x");
+
+    await File.WriteAllTextAsync(Path.Combine(windows, "system.dll"), new string('x', 4096));
+    await File.WriteAllTextAsync(Path.Combine(programFiles, "app.exe"), new string('x', 4096));
+
+    var all = FileScanner.Scan(new ScanOptions { Roots = [root] });
+    Check("扫到用户文件", all.Any(i => i.Path.EndsWith("报告-最近.docx")), all.Count.ToString());
+    Check("系统目录被跳过",
+        !all.Any(i => i.Path.Contains("Windows") || i.Path.Contains("Program Files")));
+    Check("小于 1KB 的被过滤", !all.Any(i => i.Path.EndsWith("空.txt")));
+
+    var docxOnly = FileScanner.Scan(new ScanOptions { Roots = [root], Extensions = [".docx"] });
+    Check("按扩展名过滤", docxOnly.Count == 2 && docxOnly.All(i => i.Path.EndsWith(".docx")), docxOnly.Count.ToString());
+
+    var recent = FileScanner.Scan(new ScanOptions
+    {
+        Roots = [root],
+        Extensions = [".docx"],
+        ModifiedAfter = DateTime.Now.AddDays(-30),
+    });
+    Check("按修改时间过滤", recent.Count == 1 && recent[0].Path == fresh, recent.Count.ToString());
+
+    var download = FileScanner.Scan(new ScanOptions { Roots = [root], MaxResults = 1 });
+    Check("结果条数可截断", download.Count == 1);
+
+    var emptyDir = Path.Combine(root, "Archive");
+    Directory.CreateDirectory(emptyDir);
+    var excluded = FileScanner.Scan(new ScanOptions { Roots = [root], ExcludedPaths = [emptyDir] });
+    Check("排除目录生效（自身没文件，不影响结果）", excluded.Count == all.Count);
 }
 
 Console.WriteLine();

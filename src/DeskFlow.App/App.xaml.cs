@@ -154,6 +154,16 @@ public partial class App : Application
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
 
+            // --scan：直接打开扫描磁盘窗口
+            if (e.Args.Any(static x => x.Equals("--scan", StringComparison.OrdinalIgnoreCase)))
+            {
+                var scanWindow = new Scan.ScanWindow(Panel);
+                MainWindow = scanWindow;
+                scanWindow.Closed += (_, _) => Shutdown(0);
+                scanWindow.Show();
+                return;
+            }
+
             // --import <文件或目录>：按当前设置归档一次（内容分类也生效），给脚本/右键菜单用
             var importIndex = Array.FindIndex(e.Args, static x => x.Equals("--import", StringComparison.OrdinalIgnoreCase));
             if (importIndex >= 0 && importIndex + 1 < e.Args.Length)
