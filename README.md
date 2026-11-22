@@ -134,7 +134,28 @@ DeskFlow.Core             Models · Categorization(类别目录) · Abstractions
 
 ---
 
-## 六、构建与自检
+## 六、用 VS Code 打开
+
+```powershell
+code D:\文件归档          # 或直接双击仓库里的 DeskFlow.code-workspace 不存在时用这条
+```
+
+已经配好了 `.vscode/`：
+
+| 文件 | 作用 |
+| --- | --- |
+| `settings.json` | 排除 bin/obj/dist/.tmp、绑定 `DeskFlow.sln`、WPF/XAML 关联 |
+| `tasks.json` | 任务：`build`（默认 Ctrl+Shift+B）、`run: GUI`、`run: checks`、`run: diagnose`、`pack: 单文件 EXE`、`pack: MSI` |
+| `launch.json` | 三个调试目标：面板、`--diagnose` 命令行、自检程序 |
+| `extensions.json` | 推荐扩展：C#（已装 v2.160.4）、C# Dev Kit、PowerShell |
+
+首次打开如果右下角提示 "C# Dev Kit" 或 "需要还原项目"，点允许即可；
+`dotnet` 会自己 restore，之后 `Program.cs` / `*.xaml` 都有智能提示与跳转。
+
+> WPF 的界面调试：在 `DesktopPanelWindow.xaml` 里打断点，按 F5 选「调试 DeskFlow 面板」。
+> 注意面板是常驻窗口，调试时可以先在 `App.OnStartup` 里加断点看启动流程。
+
+## 七、构建与自检
 
 需要 .NET SDK 10（本机 10.0.401）。
 
@@ -148,7 +169,7 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 
 ---
 
-## 七、已知边界
+## 八、已知边界
 
 - 监听依赖**客户端默认收文件目录**；若你把文件另存到了别处，用设置里的「自动查找数据目录…」扫盘，或手动添加。
 - 目录探测走 `Environment.SpecialFolder.MyDocuments`（跟着"文档"重定向走），不是写死的 `%USERPROFILE%\Documents` —— 后者在把文档挪到 D 盘的机器上一定是空的。
@@ -161,7 +182,7 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 - 面板按内容自适应高度，超过屏幕工作区后内部滚动；不抢焦点、默认不置顶。
 - `dist\` 不进 Git（59 MB 二进制），发版走 Releases。
 
-## 八、已修复的坑（记在这免得再踩）
+## 九、已修复的坑（记在这免得再踩）
 
 | 现象 | 根因 | 修法 |
 | --- | --- | --- |
@@ -169,7 +190,7 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 | 三个客户端全显示「未检测到目录」 | 探测用死了 `%USERPROFILE%\Documents`，而本机「文档」重定向到了 `D:\docu` | 改用 `SpecialFolder.MyDocuments`；补 QQNT 9.x 的 `nt_qq\nt_data\File`、微信 4.x 的 `msg\file`、钉钉 `DingTalk\<用户>\file`；再加 3 层兜底扫盘 |
 | 面板里刷出一堆 .db / 缩略图 | QQ 会把 Thumb/Emoji/log/db 都写在收文件目录旁 | 监听器按路径段过滤噪声目录 |
 
-## 九、下一步候选
+## 十、下一步候选
 
 - [ ] 托盘图标 + 开机自启 + 全局热键唤起
 - [ ] 归档后清理重复文件、按月份/来源建二级目录

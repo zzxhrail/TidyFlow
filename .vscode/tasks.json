@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/DeskFlow.sln", "-v", "q"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run: GUI",
+      "type": "process",
+      "command": "${workspaceFolder}/src/DeskFlow.App/bin/Debug/net10.0-windows/DeskFlow.exe",
+      "dependsOn": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: checks (77 项自检)",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/tests/DeskFlow.Checks"],
+      "problemMatcher": []
+    },
+    {
+      "label": "run: diagnose",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/src/DeskFlow.App", "--", "--diagnose"],
+      "problemMatcher": []
+    },
+    {
+      "label": "pack: 单文件 EXE",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ${workspaceFolder}/build/pack.ps1",
+      "problemMatcher": []
+    },
+    {
+      "label": "pack: MSI 安装包",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ${workspaceFolder}/build/pack-installer.ps1",
+      "problemMatcher": []
+    }
+  ]
+}
