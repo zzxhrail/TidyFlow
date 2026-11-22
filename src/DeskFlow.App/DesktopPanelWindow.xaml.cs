@@ -84,10 +84,14 @@ public partial class DesktopPanelWindow : Window
 
         SizeChanged += OnSizeChanged;
         _resizeTimer.Tick += OnResizeSettled;
+        _snapTimer.Tick += OnSnapTimerTick;
+        _proximityTimer.Tick += OnProximityTick;
+        _proximityTimer.Start();
 
         // 空格快速预览（类似 macOS Quick Look）：鼠标悬停哪个文件，就预览哪个
         PreviewKeyDown += OnPanelKeyDown;
         PreviewMouseLeftButtonDown += OnWindowPreviewMouseDown;
+        MouseEnter += (_, _) => ExitSliver();
 
         // 拖放：用 handledEventsToo 挂到窗口上。
         // 之前挂在 XAML 属性上，拖到 ListBox / ScrollViewer 这些"自己会处理拖放"的子控件上时
@@ -258,12 +262,37 @@ public partial class DesktopPanelWindow : Window
 
     private void OnLocationChanged(object? sender, EventArgs e)
     {
+        if (_suppressSnap)
+        {
+            return;
+        }
+
         if (!IsLoaded)
         {
             return;
         }
 
         ScheduleSave();
+
+        // 拖动停下后再吸附，避免拖动过程中被"吸"住
+        _snapTimer.Stop();
+        _snapTimer.Start();
+    }
+
+    private readonly System.Windows.Threading.DispatcherTimer _snapTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+
+    private void OnSnapTimerTick(object? sender, EventArgs e)
+    {
+        _snapTimer.Stop();
+        _suppressSnap = true;
+        try
+        {
+            SnapToScreenEdge();
+        }
+        finally
+        {
+            _suppressSnap = false;
+        }
     }
 
     /// <summary>拖动/缩放时不要每像素写一次磁盘，停手 450ms 再落盘。</summary>
@@ -351,6 +380,225 @@ public partial class DesktopPanelWindow : Window
     private const double CollapsedHeight = 92;   // 收起条默认高度（用户可拖拽调整，会记住）
 
     private bool _topmostBeforeCollapse;
+    private bool _suppressSnap;   // 吸附过程中改 Left/Top 会再触发 LocationChanged，防抖
+
+    private enum DockEdge { None, Left, Right, Top, Bottom }
+
+    private DockEdge _dockEdge = DockEdge.None;
+    private bool _sliverMode;
+    private double _sliverRestoreWidth;
+    private double _sliverRestoreHeight;
+    private readonly System.Windows.Threading.DispatcherTimer _proximityTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+
+    private readonly System.Windows.Threading.DispatcherTimer _sliverTimer = new() { Interval = TimeSpan.FromMilliseconds(650) };
+
+    /// <summary>拖动结束时吸附到最近的屏幕边缘（24px 内）。</summary>
+    /// <summary>取当前屏幕工作区（转换成 WPF 的 DIP，否则 150% DPI 下吸附判定全错）。</summary>
+    private System.Windows.Rect GetWorkAreaDips()
+    {
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var screen = handle == IntPtr.Zero
+            ? System.Windows.Forms.Screen.PrimaryScreen!
+            : System.Windows.Forms.Screen.FromHandle(handle);
+        var area = screen.WorkingArea;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return new System.Windows.Rect(
+            area.Left / dpi.DpiScaleX,
+            area.Top / dpi.DpiScaleY,
+            area.Width / dpi.DpiScaleX,
+            area.Height / dpi.DpiScaleY);
+    }
+
+    /// <summary>拖动结束时吸附到最近的屏幕边缘（24 DIP 内）。</summary>
+    private void SnapToScreenEdge()
+    {
+        if (!IsLoaded || WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
+        var area = GetWorkAreaDips();
+        var left = Left;
+        var top = Top;
+        var right = left + ActualWidth;
+        var bottom = top + ActualHeight;
+        const double snap = 24;
+
+        _dockEdge = DockEdge.None;
+
+        if (Math.Abs(left - area.Left) <= snap)
+        {
+            Left = area.Left;
+            _dockEdge = DockEdge.Left;
+        }
+        else if (Math.Abs(right - area.Right) <= snap)
+        {
+            Left = area.Right - ActualWidth;
+            _dockEdge = DockEdge.Right;
+        }
+
+        if (Math.Abs(top - area.Top) <= snap)
+        {
+            Top = area.Top;
+            if (_dockEdge == DockEdge.None)
+            {
+                _dockEdge = DockEdge.Top;
+            }
+        }
+        else if (Math.Abs(bottom - area.Bottom) <= snap)
+        {
+            Top = area.Bottom - ActualHeight;
+            if (_dockEdge == DockEdge.None)
+            {
+                _dockEdge = DockEdge.Bottom;
+            }
+        }
+
+        Services.Diagnostics.Log($"snap: edge={_dockEdge} left={Left:F1} top={Top:F1} area={area.Left:F1},{area.Top:F1},{area.Right:F1},{area.Bottom:F1}");
+
+        ApplyDockSliver();
+    }
+
+    /// <summary>贴边且处于收起状态：650ms 后缩成 6px 细条；鼠标移入再恢复。</summary>
+    private void ApplyDockSliver()
+    {
+        if (!_collapsed || _dockEdge == DockEdge.None)
+        {
+            ExitSliver();
+            return;
+        }
+
+        _sliverTimer.Stop();
+        _sliverTimer.Tick -= SliverTick;
+        _sliverTimer.Tick += SliverTick;
+        _sliverTimer.Start();
+    }
+
+    /// <summary>贴边停车时轮询光标：靠近边缘 12 DIP 就唤出（比 MouseEnter 稳，窗口只露 4px 时也能触发）。</summary>
+    private void OnProximityTick(object? sender, EventArgs e)
+    {
+        if (!_sliverMode || _dockEdge == DockEdge.None)
+        {
+            return;
+        }
+
+        var area = GetWorkAreaDips();
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var cursor = System.Windows.Forms.Cursor.Position;
+        var x = cursor.X / dpi.DpiScaleX;
+        var y = cursor.Y / dpi.DpiScaleY;
+        const double hot = 14;
+
+        var near = _dockEdge switch
+        {
+            DockEdge.Right => x >= area.Right - hot && y >= Top && y <= Top + Height,
+            DockEdge.Left => x <= area.Left + hot && y >= Top && y <= Top + Height,
+            DockEdge.Top => y <= area.Top + hot && x >= Left && x <= Left + Width,
+            DockEdge.Bottom => y >= area.Bottom - hot && x >= Left && x <= Left + Width,
+            _ => false,
+        };
+
+        if (near)
+        {
+            ExitSliver();
+        }
+    }
+
+    private void SliverTick(object? sender, EventArgs e)
+    {
+        _sliverTimer.Stop();
+
+        if (!_collapsed || _dockEdge == DockEdge.None || IsMouseOver)
+        {
+            return;
+        }
+
+        EnterSliver();
+    }
+
+    /// <summary>贴边收起且没鼠标时：窗口移出屏幕，只留 4 DIP 在边上（不改变大小，恢复更可靠）。</summary>
+    private void EnterSliver()
+    {
+        if (_sliverMode || _dockEdge == DockEdge.None)
+        {
+            return;
+        }
+
+        _sliverMode = true;
+        _sliverRestoreWidth = Width;
+        _sliverRestoreHeight = Height;
+
+        var area = GetWorkAreaDips();
+        const double visible = 10;
+
+        _suppressSnap = true;
+        try
+        {
+            switch (_dockEdge)
+            {
+                case DockEdge.Right:
+                    Left = area.Right - visible;
+                    break;
+                case DockEdge.Left:
+                    Left = area.Left - Width + visible;
+                    break;
+                case DockEdge.Top:
+                    Top = area.Top - Height + visible;
+                    break;
+                case DockEdge.Bottom:
+                    Top = area.Bottom - visible;
+                    break;
+            }
+        }
+        finally
+        {
+            _suppressSnap = false;
+        }
+
+        Services.Diagnostics.Log($"sliver parked: edge={_dockEdge} left={Left:F1} top={Top:F1}");
+    }
+
+
+    /// <summary>鼠标靠近：把窗口移回屏幕内。</summary>
+    private void ExitSliver()
+    {
+        if (!_sliverMode)
+        {
+            return;
+        }
+
+        _sliverMode = false;
+        var area = GetWorkAreaDips();
+
+        _suppressSnap = true;
+        try
+        {
+            switch (_dockEdge)
+            {
+                case DockEdge.Right:
+                    Left = area.Right - Width;
+                    Top = Math.Max(area.Top, Math.Min(Top, area.Bottom - Height));
+                    break;
+                case DockEdge.Left:
+                    Left = area.Left;
+                    break;
+                case DockEdge.Top:
+                    Top = area.Top;
+                    break;
+                case DockEdge.Bottom:
+                    Top = area.Bottom - Height;
+                    break;
+            }
+        }
+        finally
+        {
+            _suppressSnap = false;
+        }
+
+        Services.Diagnostics.Log($"sliver revealed: edge={_dockEdge} left={Left:F1} top={Top:F1}");
+    }
+
+
 
     private void ToggleCollapse_Click(object sender, RoutedEventArgs e) => SetCollapsed(!_collapsed);
 
@@ -362,11 +610,14 @@ public partial class DesktopPanelWindow : Window
             return;
         }
 
+        // 双击收起条上的图标 = 直接启动（WPF 的 Button 双击事件在滚动容器里不可靠，这里统一处理）
         for (var node = e.OriginalSource as DependencyObject; node is not null; node = VisualTreeHelper.GetParent(node))
         {
-            if (node is Button)
+            if (node is Button { Tag: PanelTile tile })
             {
-                return;   // 交给图标：双击启动
+                e.Handled = true;
+                LaunchTile(tile);
+                return;
             }
         }
 
@@ -455,6 +706,15 @@ public partial class DesktopPanelWindow : Window
         }
 
         CollapseButton.Content = collapsed ? "\uE922" : "\uE921";
+
+        if (collapsed)
+        {
+            ApplyDockSliver();
+        }
+        else
+        {
+            ExitSliver();
+        }
 
         Dispatcher.BeginInvoke(new Action(() =>
         {
