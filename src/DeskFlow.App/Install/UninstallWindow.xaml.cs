@@ -1,3 +1,4 @@
+using DeskFlow.App.Services;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -14,6 +15,7 @@ public partial class UninstallWindow : Window
     public UninstallWindow(SetupOptions options)
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _options = options;
         KeepDataCheck.IsChecked = options.KeepUserData;
 

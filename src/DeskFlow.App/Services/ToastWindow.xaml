@@ -4,7 +4,7 @@
         Width="380" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         ShowActivated="False" FontFamily="Microsoft YaHei UI, Segoe UI">
-    <Border CornerRadius="10" Background="#FF1B1D22" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="12,10"
+    <Border CornerRadius="12" Background="#F21B1F27" BorderBrush="#3DFFFFFF" BorderThickness="1" Padding="13,11"
             MouseLeftButtonUp="Card_Click">
         <Border.Effect>
             <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="#000000" />
@@ -19,10 +19,10 @@
             <Image x:Name="IconImage" Grid.Column="0" Width="28" Height="28" VerticalAlignment="Top" Margin="0,2,10,0" />
 
             <StackPanel Grid.Column="1">
-                <TextBlock x:Name="TitleText" Foreground="#EDEFF2" FontSize="13" FontWeight="SemiBold" />
-                <TextBlock x:Name="DetailText" Foreground="#9AA0A6" FontSize="11.5" Margin="0,4,0,0"
+                <TextBlock x:Name="TitleText" Foreground="{StaticResource TextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                <TextBlock x:Name="DetailText" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11.5" Margin="0,4,0,0"
                            TextWrapping="Wrap" MaxHeight="46" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="点击打开文件" Foreground="#5E646D" FontSize="10" Margin="0,6,0,0" />
+                <TextBlock Text="点击打开文件" Foreground="{StaticResource TextTertiaryBrush}" FontSize="10" Margin="0,6,0,0" />
             </StackPanel>
 
             <TextBlock Grid.Column="2" Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"

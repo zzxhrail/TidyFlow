@@ -1,3 +1,4 @@
+using DeskFlow.App.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,6 +29,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;
         _settings = settings;
 

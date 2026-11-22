@@ -1,3 +1,4 @@
+using DeskFlow.App.Services;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -16,6 +17,7 @@ public partial class InstallerWindow : Window
     public InstallerWindow(SetupOptions options)
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _options = options;
 
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";

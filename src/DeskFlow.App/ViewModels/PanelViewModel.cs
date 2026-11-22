@@ -153,7 +153,8 @@ public sealed class PanelViewModel : ObservableObject
         const double minTileWidth = 80;
         var usable = Math.Max(160, panelWidth - horizontalPadding);
         var columns = Math.Clamp((int)Math.Floor(usable / minTileWidth), 2, 8);
-        var tileWidth = Math.Max(64, Math.Floor(usable / columns) - 4);
+        // 扣掉格子外边距（3×2）与按钮内边距（4×2），否则文字会被 ClipToBounds 切掉
+        var tileWidth = Math.Max(64, Math.Floor(usable / columns) - 14);
         var scale = Math.Clamp(tileWidth / 70.0, 0.8, 1.6);
 
         var iconSize = Math.Round(30 * Math.Clamp(scale, 0.85, 1.6), 1);
@@ -182,7 +183,7 @@ public sealed class PanelViewModel : ObservableObject
         SubtitleFontSize = subtitleFont;
         ShowSubtitle = showSubtitle;
         _lineHeight = lineHeight;
-        _maxTitleHeight = Math.Round(lineHeight * 2 + 1, 1);
+        _maxTitleHeight = Math.Round(lineHeight * 2 + 2, 1);
         OnPropertyChanged(nameof(TileLineHeight));
         OnPropertyChanged(nameof(TitleMaxHeight));
 
@@ -621,8 +622,8 @@ public sealed class PanelViewModel : ObservableObject
             LineHeight = _lineHeight,
             MaxTitleHeight = _maxTitleHeight,
             ShowSubtitle = ShowSubtitle && !string.IsNullOrEmpty(subtitle),
-            TitleText = FitText(title, TileWidth - 2, TileFontSize, 2),
-            SubtitleText = FitText(subtitle, TileWidth - 2, SubtitleFontSize, 1),
+            TitleText = FitFileName(title, TileWidth - 4, TileFontSize, 2),
+            SubtitleText = FitText(subtitle, TileWidth - 4, SubtitleFontSize, 1),
         };
 
     /// <summary>
@@ -636,11 +637,12 @@ public sealed class PanelViewModel : ObservableObject
             return text;
         }
 
-        var budget = Math.Max(2, (int)Math.Floor(width / fontSize * maxLines));
+        // 0.92 是安全余量：贴边会换来"半个字被裁掉"，宁可提前省略
+        var budget = Math.Max(2, (int)Math.Floor(width / fontSize * maxLines * 0.92));
         var used = 0.0;
         for (var i = 0; i < text.Length; i++)
         {
-            used += IsWide(text[i]) ? 1.0 : 0.56;
+            used += IsWide(text[i]) ? 1.0 : 0.62;
             if (used > budget)
             {
                 return text[..Math.Max(1, i - 1)].TrimEnd() + "…";
@@ -648,6 +650,40 @@ public sealed class PanelViewModel : ObservableObject
         }
 
         return text;
+    }
+
+    /// <summary>
+    /// 文件名专属排版：一行放不下时优先在扩展名前换行（"会议纪要.docx" → 两行），
+    /// 比在词中间被裁掉好看，也避免 WPF 对无空格长串"换不了行就溢出去"的问题。
+    /// </summary>
+    private static string FitFileName(string name, double width, double fontSize, int maxLines)
+    {
+        var single = Math.Max(3, (int)Math.Floor(width / fontSize * 0.92));
+        if (EstimateUnits(name) <= single || maxLines < 2)
+        {
+            return FitText(name, width, fontSize, maxLines);
+        }
+
+        var dot = name.LastIndexOf('.');
+        if (dot <= 0 || dot == name.Length - 1)
+        {
+            return FitText(name, width, fontSize, maxLines);
+        }
+
+        var stem = FitText(name[..dot], width, fontSize, 1);
+        var extension = name[dot..];
+        return stem + Environment.NewLine + extension;
+    }
+
+    private static double EstimateUnits(string text)
+    {
+        var used = 0.0;
+        foreach (var c in text)
+        {
+            used += IsWide(c) ? 1.0 : 0.62;
+        }
+
+        return used;
     }
 
     private static bool IsWide(char c) =>

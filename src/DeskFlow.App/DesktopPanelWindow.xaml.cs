@@ -78,7 +78,12 @@ public partial class DesktopPanelWindow : Window
         base.OnSourceInitialized(e);
         var handle = new WindowInteropHelper(this).Handle;
         HwndSource.FromHwnd(handle)?.AddHook(WndProc);
-        RoundedCorners.Apply(handle);
+
+        // 云母材质：成功就让背景透出系统材质，失败（Win10/关闭特效）退回深色实色
+        if (!WindowEffects.Apply(this, BackdropKind.Mica))
+        {
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x18, 0x1A, 0x1F));
+        }
     }
 
     /// <summary>

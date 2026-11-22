@@ -4,32 +4,36 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="DeskFlow 面板" Width="376" Height="640" MinWidth="280" MinHeight="180"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="True" Topmost="False"
-        Background="#181A1F"
+        Background="Transparent"
         FontFamily="Microsoft YaHei UI, Segoe UI" TextOptions.TextFormattingMode="Display">
 
-    <!-- 用 WindowChrome 拿到系统级边框/窗口阴影；AllowsTransparency=False 避开
-         "分层窗口最小化后不重绘" 的 WPF 老问题（Windows 11 上再由 DWM 负责圆角）。 -->
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0"
-                            GlassFrameThickness="-1" UseAeroCaptionButtons="False" />
+                            GlassFrameThickness="0" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <!-- 格子尺寸/字号全部绑定到视图模型的密度属性，窗口一拖就重排 -->
+        <!-- 面板底色：接近不透明的深色，有没有云母都清晰；上部略亮一点做层次 -->
+        <LinearGradientBrush x:Key="PanelTint" StartPoint="0,0" EndPoint="0.4,1">
+            <GradientStop Color="#F21E2129" Offset="0" />
+            <GradientStop Color="#F2181A21" Offset="0.5" />
+            <GradientStop Color="#F214161C" Offset="1" />
+        </LinearGradientBrush>
+
         <DataTemplate x:Key="TileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}">
                 <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}">
                     <Image Source="{Binding Icon}" HorizontalAlignment="Center"
                            Width="{Binding IconSize}" Height="{Binding IconSize}" />
-                    <TextBlock Text="{Binding TitleText}" Foreground="#E3E6EA" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"
+                    <TextBlock Text="{Binding TitleText}" Foreground="{StaticResource TextPrimaryBrush}"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"
                                Width="{Binding BoxWidth}"
                                FontSize="{Binding TitleFontSize}"
                                LineHeight="{Binding LineHeight}"
                                LineStackingStrategy="BlockLineHeight"
                                MaxHeight="{Binding MaxTitleHeight}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SubtitleText}" Foreground="#6F7681" TextAlignment="Center"
-                               Margin="0,2,0,0" TextWrapping="NoWrap"
+                    <TextBlock Text="{Binding SubtitleText}" Foreground="{StaticResource TextTertiaryBrush}"
+                               TextAlignment="Center" Margin="0,3,0,0" TextWrapping="NoWrap"
                                Width="{Binding BoxWidth}"
                                FontSize="{Binding SubtitleFontSize}"
                                Visibility="{Binding ShowSubtitle, Converter={StaticResource BoolToVisibility}}" />
@@ -38,14 +42,19 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Border x:Name="Root" CornerRadius="0" Background="#181A1F" BorderBrush="#33FFFFFF" BorderThickness="1"
+    <Border x:Name="Root" CornerRadius="16" Background="{StaticResource PanelTint}"
+            BorderBrush="#33FFFFFF" BorderThickness="1" Margin="10"
             MouseLeftButtonDown="Root_MouseDown">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.35" Color="#000000" />
+        </Border.Effect>
 
         <Grid>
-            <ScrollViewer x:Name="BodyScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0">
-                <StackPanel Margin="12,10,12,12">
+            <ScrollViewer x:Name="BodyScroller" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Padding="0" Margin="0,2,0,0">
+                <StackPanel Margin="14,12,14,14">
 
-                    <!-- 标题栏（可拖动） -->
+                    <!-- 标题栏 -->
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -53,17 +62,20 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Width="18" Height="18" CornerRadius="5" Background="#2F6BFF" VerticalAlignment="Center">
-                            <TextBlock Text="D" Foreground="White" FontSize="11" FontWeight="Bold"
+                        <Border Grid.Column="0" Width="26" Height="26" CornerRadius="8" Background="{StaticResource AccentGradient}"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="D" Foreground="White" FontSize="14" FontWeight="Bold"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="DeskFlow" Foreground="#EDEFF2" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Status}" Foreground="#7E858F" FontSize="10" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="DeskFlow" Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextTertiaryBrush}"
+                                       FontSize="10.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                         </StackPanel>
 
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                             <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
                                     ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
                             <Button Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="设置" Click="OpenSettings_Click" />
@@ -76,7 +88,8 @@
                     <StackPanel x:Name="Body">
 
                         <!-- 来源开关 -->
-                        <Border Background="#14FFFFFF" CornerRadius="8" Padding="8,6" Margin="0,8,0,0">
+                        <Border CornerRadius="12" Background="#16FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"
+                                Padding="10,8" Margin="0,14,0,0">
                             <ItemsControl ItemsSource="{Binding Sources}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -86,11 +99,12 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding AutoDownload, Mode=TwoWay}" Click="AutoDownload_Click"
-                                                  Margin="0,2,12,2" VerticalContentAlignment="Center" IsEnabled="{Binding IsAvailable}"
+                                                  Margin="0,3,14,3" IsEnabled="{Binding IsAvailable}"
                                                   ToolTip="勾选 = 发现即自动下载并归档；不勾 = 只进待接收列表">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" Foreground="#DDE1E6" FontSize="11.5" />
-                                                <TextBlock Text="{Binding Detail}" Foreground="#6F7681" FontSize="10" Margin="4,0,0,0" />
+                                                <TextBlock Text="{Binding Name}" FontSize="11.5" />
+                                                <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextTertiaryBrush}"
+                                                           FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </CheckBox>
                                     </DataTemplate>
@@ -100,35 +114,42 @@
 
                         <!-- 待接收 -->
                         <StackPanel Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="待接收（点击归档 / 右键忽略）" Style="{StaticResource SectionHeader}" Foreground="#FFCE6B" />
-                            <ItemsControl ItemsSource="{Binding PendingFiles}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource TilePanel}" />
+                            <TextBlock Text="待接收" Style="{StaticResource SectionHeader}"
+                                       Foreground="{StaticResource WarningBrush}" />
+                            <ItemsControl ItemsSource="{Binding PendingFiles}" ItemTemplate="{StaticResource TileTemplate}"
+                                          ItemsPanel="{StaticResource TilePanel}" />
                         </StackPanel>
 
                         <!-- 快捷方式 -->
                         <TextBlock Text="应用与快捷方式" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource TilePanel}" />
+                        <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}"
+                                      ItemsPanel="{StaticResource TilePanel}" />
 
                         <!-- 最近归档 -->
                         <TextBlock Text="最近归档" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource TilePanel}" />
-                        <TextBlock Text="还没有归档记录，等文件进来或点上面的来源开关" Style="{StaticResource Hint}"
-                                   Foreground="#5E646D" Margin="2,2,0,0"
+                        <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}"
+                                      ItemsPanel="{StaticResource TilePanel}" />
+                        <TextBlock Text="还没有归档记录，等文件进来或打开上面的开关" Style="{StaticResource Muted}"
+                                   Margin="2,4,0,0"
                                    Visibility="{Binding HasRecent, Converter={StaticResource InverseBoolToVisibility}}" />
 
                         <!-- 分类 -->
                         <TextBlock Text="分类" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource TilePanel}" />
+                        <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource TileTemplate}"
+                                      ItemsPanel="{StaticResource TilePanel}" />
 
-                        <Border Background="#10FFFFFF" CornerRadius="6" Padding="8,6" Margin="0,12,0,0">
-                            <TextBlock Text="{Binding LogText}" Foreground="#8A9099" FontSize="10" TextWrapping="Wrap" />
+                        <Border CornerRadius="10" Background="#12FFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                                Padding="10,8" Margin="0,14,0,0">
+                            <TextBlock Text="{Binding LogText}" Foreground="{StaticResource TextTertiaryBrush}"
+                                       FontSize="10" TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- 右下角尺寸提示（拖动由 WM_NCHITTEST 处理，这里只是视觉标记） -->
-            <Path Data="M0,12 L12,0 M0,6 L6,0" Stroke="#55FFFFFF" StrokeThickness="1.4"
-                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,5,5" IsHitTestVisible="False" />
+            <!-- 右下角缩放提示 -->
+            <Path Data="M0,12 L12,0 M0,6 L6,0" Stroke="#4DFFFFFF" StrokeThickness="1.4"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,7,7" IsHitTestVisible="False" />
         </Grid>
     </Border>
 </Window>
