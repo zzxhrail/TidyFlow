@@ -236,7 +236,9 @@ public sealed class PanelViewModel : ObservableObject
                 }))
                 {
                     var info = new FileInfo(file);
-                    if (info.LastWriteTime < since || _index.KnowsSourcePath(file))
+                    // 补扫也要走同样的噪声过滤，否则启动瞬间会把 QQ 日志、缩略图、
+                    // 微信 apm 记录当成"收到的文件"归档进来。
+                    if (info.LastWriteTime < since || _index.KnowsSourcePath(file) || IncomingWatcher.IsNoise(file, target.Directory))
                     {
                         continue;
                     }

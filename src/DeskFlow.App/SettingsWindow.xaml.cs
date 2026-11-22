@@ -92,6 +92,14 @@ public partial class SettingsWindow : Window
         RefreshWatchList();
     }
 
+    private void OpenWatchDir_Click(object sender, RoutedEventArgs e)
+    {
+        if (WatchList.SelectedItem is ListRow row)
+        {
+            ShellLauncher.RevealInExplorer(row.Value);
+        }
+    }
+
     private async void AutoScan_Click(object sender, RoutedEventArgs e)
     {
         AutoScanButton.IsEnabled = false;

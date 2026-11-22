@@ -361,8 +361,9 @@ Console.WriteLine("[13] SourceDirectoryResolver");
     Directory.CreateDirectory(docs);
 
     // QQNT 9.x
-    var qqFile = Path.Combine(docs, "Tencent Files", "123456", "nt_qq", "nt_data", "File");
-    Directory.CreateDirectory(qqFile);
+    var qqData = Path.Combine(docs, "Tencent Files", "123456", "nt_qq", "nt_data");
+    var qqFile = Path.Combine(qqData, "File");
+    Directory.CreateDirectory(Path.Combine(qqFile, "Thumb"));
     // 微信 4.x
     var wx4 = Path.Combine(docs, "xwechat_files", "wxid_abc_1234", "msg", "file", "2026-11");
     Directory.CreateDirectory(wx4);
@@ -378,7 +379,7 @@ Console.WriteLine("[13] SourceDirectoryResolver");
     Directory.CreateDirectory(appData);
     var targets = SourceDirectoryResolver.Discover(userProfile: profile, documentsRoot: docs, appDataRoot: appData);
     var qq = targets.FirstOrDefault(t => t.Source == FileSource.Qq);
-    Check("重定向文档目录下的 QQNT 被识别", qq is not null && qq.Directory == qqFile, qq?.Directory);
+    Check("重定向文档目录下的 QQNT 被识别（盯 nt_data 整个子树）", qq is not null && qq.Directory == qqData, qq?.Directory);
     Check("微信 4.x 被识别", targets.Any(t => t.Source == FileSource.WeChat && t.Directory.EndsWith(Path.Combine("msg", "file"), StringComparison.Ordinal)));
     Check("微信 3.x 被识别", targets.Any(t => t.Source == FileSource.WeChat && t.Directory.EndsWith(Path.Combine("FileStorage", "File"), StringComparison.Ordinal)));
     Check("钉钉被识别", targets.Any(t => t.Source == FileSource.DingTalk && t.Directory == dt));
@@ -398,10 +399,13 @@ Console.WriteLine("[13] SourceDirectoryResolver");
 
     // QQ 缓存目录（Thumb/Emoji/log）不算收到的文件
     var thumb = Path.Combine(qqFile, "Thumb", "abc.jpg");
-    var realFile = Path.Combine(qqFile, "FileRecv", "报告.docx");
-    Check("Thumb 被判定为噪声", IncomingWatcher.IsNoise(thumb, qqFile));
-    Check("FileRecv 不算噪声", !IncomingWatcher.IsNoise(realFile, qqFile));
-    Check("日志目录被判定为噪声", IncomingWatcher.IsNoise(Path.Combine(qqFile, "log", "a.log"), qqFile));
+    var realFile = Path.Combine(qqFile, "Ori", "报告.docx");
+    var datalineFile = Path.Combine(qqData, "dataline", "手机传的.pdf");
+    Check("Thumb 被判定为噪声", IncomingWatcher.IsNoise(thumb, qqData));
+    Check("File 下 Ori 子目录的文件不算噪声", !IncomingWatcher.IsNoise(realFile, qqData));
+    Check("dataline 里的文件不算噪声", !IncomingWatcher.IsNoise(datalineFile, qqData));
+    Check("日志目录被判定为噪声", IncomingWatcher.IsNoise(Path.Combine(qqData, "log", "a.log"), qqData));
+    Check("Emoji 目录被判定为噪声", IncomingWatcher.IsNoise(Path.Combine(qqData, "Emoji", "x.gif"), qqData));
 }
 
 Console.WriteLine();

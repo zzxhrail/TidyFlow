@@ -90,8 +90,16 @@ public static class SourceDirectoryResolver
 
     private static void AddQqAccount(List<WatchTarget> targets, string account)
     {
-        // QQNT 9.x：nt_qq\nt_data\File（收文件在 File\FileRecv，缓存 Thumb 会被监听器过滤）
-        var ntFile = Path.Combine(account, "nt_qq", "nt_data", "File");
+        // QQNT 9.x：监听整个 nt_qq\nt_data —— 收到的文件可能落在 File\Ori、
+        // File\FileRecv、dataline 等不同子目录，只盯 File 会漏；缓存目录由监听器过滤。
+        var ntData = Path.Combine(account, "nt_qq", "nt_data");
+        var ntFile = Path.Combine(ntData, "File");
+        if (Directory.Exists(ntData))
+        {
+            targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntData, FileSource.Qq, IsDetected: true));
+            return;
+        }
+
         if (Directory.Exists(ntFile))
         {
             targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntFile, FileSource.Qq, IsDetected: true));
@@ -107,7 +115,7 @@ public static class SourceDirectoryResolver
         }
 
         // 账号目录在、但还没收过文件：给 QQNT 的预测路径，目录出现即生效
-        targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntFile, FileSource.Qq, IsDetected: false));
+        targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntData, FileSource.Qq, IsDetected: false));
     }
 
     private static void AddWeChat(List<WatchTarget> targets, string root)

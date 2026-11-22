@@ -40,6 +40,7 @@
                     <Button Content="添加监听目录…" Click="AddWatchDir_Click" />
                     <Button Content="移除选中" Click="RemoveWatchDir_Click" />
                     <Button Content="立即扫描一次" Click="ScanNow_Click" />
+                    <Button Content="打开选中目录" Click="OpenWatchDir_Click" />
                     <Button x:Name="AutoScanButton" Content="自动查找数据目录…" Click="AutoScan_Click"
                             ToolTip="扫描各盘符找 QQ/微信/钉钉 的数据目录（客户端改过保存位置时用）" />
                 </StackPanel>

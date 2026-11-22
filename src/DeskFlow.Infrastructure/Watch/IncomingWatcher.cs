@@ -143,8 +143,12 @@ public sealed class IncomingWatcher : IDisposable
 
     private static readonly HashSet<string> NoiseSegments = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Thumb", "ThumbTemp", "Emoji", "emoji", "log", "logs", "cache", "Cache", "temp", "Temp",
-        "nt_temp", "nt_db", "db", "db_storage", "resource_cache", "crash", "crashinfo", "dumps",
+        // 缩略图 / 表情 / 日志 / 数据库 / 内部缓存：都不是"收到的文件"
+        "Thumb", "ThumbTemp", "Emoji", "emoji", "log", "logs", "log-cache", "cache", "Cache",
+        "temp", "Temp", "nt_temp", "nt_db", "db", "db_storage", "resource_cache", "crash",
+        "crashinfo", "dumps", "avatar", "PhotoWall", "PrivilegeIcon", "mmkv", "ams", "msf",
+        "OnlineStatus", "Qzone", "wmpf", "qqexBrowser", "remoting", "UnitedConfig",
+        "VasUpdateSystem", "ams", "Ptt", "QqExBrowser", "holmes", "holmeslogs",
     };
 
     /// <summary>
