@@ -8,9 +8,9 @@ namespace DeskFlow.Infrastructure.Watch;
 /// 关键点（踩过的坑）：
 /// 1. **不能用 %USERPROFILE%\Documents** —— 用户把"文档"重定向到 D:\docu 之后那里什么都没有。
 ///    必须用 Environment.SpecialFolder.MyDocuments，它才跟着重定向走。
-/// 2. QQNT 9.x 的落盘位置是 &lt;账号&gt;\nt_qq\nt_data\File（收文件在 File\FileRecv），
-///    旧版才是 &lt;账号&gt;\FileRecv；两套都探测。
-/// 3. 微信 4.x 是 &lt;wxid&gt;\msg\file\YYYY-MM；3.x 是 &lt;wxid&gt;\FileStorage\File。
+/// 2. QQNT 9.x 的落盘位置是 账号目录\nt_qq\nt_data\File（收文件在 File\FileRecv），
+///    旧版才是 账号目录\FileRecv；两套都探测。
+/// 3. 微信 4.x 是 wxid 目录\msg\file\YYYY-MM；3.x 是 wxid 目录\FileStorage\File。
 /// 4. 目录可能"还没被创建"（客户端没收到过文件），这时按预测路径给出 target，
 ///    监听器会在目录出现后自动生效，界面上显示"等待首次接收"。
 /// </summary>
