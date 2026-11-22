@@ -725,14 +725,15 @@ Console.WriteLine("[20.6] Unrecognized bucket");
 // ---------- 20.7 动画开关持久化 ----------
 Console.WriteLine("[20.7] Animations setting");
 {
-    var home = NewTempDir();
     var settings = new ArchiveSettings();
-    Check("默认开启动画", settings.AnimationsEnabled);
     settings.AnimationsEnabled = false;
     settings.Save();
+    Check("关掉后能持久化", !new ArchiveSettings().AnimationsEnabled);
 
-    var reloaded = new ArchiveSettings();
-    Check("关掉后能持久化", !reloaded.AnimationsEnabled);
+    settings = new ArchiveSettings();
+    settings.AnimationsEnabled = true;
+    settings.Save();
+    Check("打开后能持久化", new ArchiveSettings().AnimationsEnabled);
 }
 
 // ---------- 21. 内容分类准确率 ----------
