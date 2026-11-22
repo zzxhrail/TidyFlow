@@ -1011,3 +1011,18 @@ DwmExtendFrameIntoClientArea(hwnd, -1,-1,-1,-1);             // 边框延伸进�
 瓦片固定 **74×74**，`StackPanel` 透明底铺满 → 图标上下左右的留白区域也能双击启动，等于「整块图标」都可点。
 
 ![云母](docs/screenshot-mica.png)
+
+
+## 0.9.25：设置界面改成 Win11 设置风格
+
+![设置界面](docs/screenshot-settings-new.png)
+
+| 区域 | 内容 |
+| --- | --- |
+| 顶部 | Logo + 「TidyFlow 设置」 · 中间搜索框（输入即过滤左侧栏目） · 右上最小化/关闭 |
+| 左栏 | 图标 + 文字的导航，选中项带 3px 强调条 |
+| 内容 | 大标题 + 说明 + 卡片行（左侧标题/副标题，右侧开关） |
+
+窗口改成 `WindowStyle=None` + `WindowChrome` 自绘（可拖、可缩放、圆角 8），并沿用云母底。
+
+调试用：`DESKFLOW_OPEN_SETTINGS=1` 启动即打开设置页（截图/回归用）。

@@ -664,8 +664,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Grid Height="40">
-                        <Border x:Name="Bd" CornerRadius="4" Background="Transparent" Padding="12,0" Margin="0,0,8,0">
+                    <Grid Height="44">
+                        <Border x:Name="Bd" CornerRadius="6" Background="Transparent" Padding="14,0" Margin="0,2,8,2">
                             <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
                         </Border>
                         <Border x:Name="Indicator" Width="3" Height="16" CornerRadius="2" HorizontalAlignment="Left"
@@ -695,13 +695,13 @@
                 <ControlTemplate TargetType="TabControl">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="232" />
+                            <ColumnDefinition Width="248" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" BorderBrush="#0FFFFFFF" BorderThickness="0,0,1,0" Padding="8,16,8,16">
                             <ItemsPresenter />
                         </Border>
-                        <ContentPresenter Grid.Column="1" Margin="30,22,30,22" ContentSource="SelectedContent" />
+                        <ContentPresenter Grid.Column="1" Margin="34,24,34,24" ContentSource="SelectedContent" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

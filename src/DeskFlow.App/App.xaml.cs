@@ -320,6 +320,17 @@ public partial class App : Application
             Panel.StartWatching();
             // 启动补扫：这段时间识别到的都是历史文件，不弹系统通知
             Panel.SuppressNotifications = true;
+            // 调试用：DESKFLOW_OPEN_SETTINGS=1 启动即打开设置页（截图/回归用）
+            if (Environment.GetEnvironmentVariable("DESKFLOW_OPEN_SETTINGS") == "1")
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var settings = new SettingsWindow(Panel, Settings);
+                    settings.Owner = this.MainWindow;
+                    settings.Show();
+                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
+
             Panel.ImportRecent(TimeSpan.FromMinutes(30));
 
             var quietTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };

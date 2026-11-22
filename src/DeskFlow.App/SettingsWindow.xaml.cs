@@ -302,4 +302,66 @@ public partial class SettingsWindow : Window
     {
         public override string ToString() => Display;
     }
+
+    /// <summary>按关键字过滤左侧导航：只留标题匹配的页。</summary>
+    private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (Nav is null)
+        {
+            return;
+        }
+
+        var query = SearchBox?.Text?.Trim() ?? string.Empty;
+        if (SearchPlaceholder is not null)
+        {
+            SearchPlaceholder.Visibility = query.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        foreach (System.Windows.Controls.TabItem item in Nav.Items)
+        {
+            var title = (item.Header as System.Windows.FrameworkElement)?.TemplatedParent is null
+                ? ExtractText(item)
+                : ExtractText(item);
+            item.Visibility = query.Length == 0 || title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
+        }
+    }
+
+    private static string ExtractText(System.Windows.Controls.TabItem item)
+    {
+        var builder = new System.Text.StringBuilder();
+        if (item.Header is System.Windows.DependencyObject node)
+        {
+            Collect(node, builder);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void Collect(System.Windows.DependencyObject node, System.Text.StringBuilder builder)
+    {
+        if (node is System.Windows.Controls.TextBlock text)
+        {
+            builder.Append(text.Text);
+        }
+
+        var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(node);
+        for (var i = 0; i < count; i++)
+        {
+            Collect(System.Windows.Media.VisualTreeHelper.GetChild(node, i), builder);
+        }
+    }
+
+    private void Header_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == System.Windows.Input.MouseButton.Left && e.ClickCount == 1)
+        {
+            DragMove();
+        }
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void CloseSettings_Click(object sender, RoutedEventArgs e) => Close();
 }
