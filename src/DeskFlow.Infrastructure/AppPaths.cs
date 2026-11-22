@@ -5,10 +5,20 @@ public static class AppPaths
 {
     public const string ProductName = "DeskFlow";
 
+    /// <summary>
+    /// 数据根目录。默认 %LOCALAPPDATA%\DeskFlow；
+    /// 设置环境变量 DESKFLOW_HOME 可切到任意目录（便携模式 / 自动化测试用，不污染真实配置）。
+    /// </summary>
     public static string RootDirectory
     {
         get
         {
+            var custom = Environment.GetEnvironmentVariable("DESKFLOW_HOME");
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                return custom;
+            }
+
             var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return Path.Combine(local, ProductName);
         }
