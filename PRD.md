@@ -232,6 +232,7 @@ TidyFlow.exe
 
 | 红线 | 原因 | 检查方式 |
 | --- | --- | --- |
+| **Window 不能设置 RenderTransform** | 给窗口做"滑入/缩放"动画会抛 `InvalidOperationException: Transform is not valid for Window`，而且是在 Loaded 里抛，界面直接白屏 | 窗口动画必须作用于窗口的 Content 元素；`Animations` 内部已自动改到内容元素并 try/catch 兜底 |
 | 资源字典里 **Color 不能当 Brush 用** | `{StaticResource ColorXxx}` 赋给 `Background` 等 Brush 属性，编译期不报错，**渲染时才抛异常**；悬停触发 → 每帧重试 → 极卡并最终闪退 | 改样式只引用 `XxxBrush`；搜 `StaticResource Color` 不得出现在 Brush 属性上 |
 | 窗口 **Icon 不要写相对路径** | `Icon="Assets/x.ico"` 会按窗口所在文件夹解析，子目录窗口变成 `history/assets/x.ico` → 找不到资源 → 打开即崩 | 统一在代码里用 `pack://application:,,,/Assets/icon-128.png` |
 | 绑定到 ListBox 的集合必须是 **ObservableCollection** | 用 `List<T>` 原地 Clear/Add 不发通知 → 生成器状态不一致 → `InvalidOperationException` | 导航类数据一律用 ObservableCollection |
@@ -325,6 +326,7 @@ InstallerService ──▶ InstallLayout（快捷方式/自启/卸载项）
 
 | 版本 | 日期 | 变化摘要 |
 | --- | --- | --- |
+| 0.9.5 | 2026-11-22 | 修设置等窗口白屏：Window 不支持 RenderTransform，动画改为作用于窗口内容 |
 | 0.9.4 | 2026-11-22 | 移除「批量文件盘点与报表」窗口（白底、与整体风格不一致），入口一并删除；命令行 --run 保留 |
 | 0.9.3 | 2026-11-22 | 新增方向性界面切换、弹窗缩放动画、操作确认卡片动画 |
 | 0.9.2 | 2026-11-22 | 归档目录独立成「固定位置」行，不再因新增快捷方式而消失 |

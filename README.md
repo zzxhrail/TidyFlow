@@ -696,3 +696,20 @@ UIA 实测：格子左边 341 · 勾选框左边 343（距边 2px）· 图标/�
 ```
 TidyFlow.exe --run <目录> --out <输出目录>
 ```
+
+
+## 设置窗口白屏修复（0.9.5）
+
+现象：打开设置/归档记录/扫描/安装窗口时，只剩一个纯白窗口，什么都没有。
+
+原因：0.9.0 给窗口加了"淡入 + 上移"动画，但 WPF 的 `Window` **不允许设置 RenderTransform**，直接抛：
+
+```
+System.InvalidOperationException: Transform is not valid for Window.
+   at DeskFlow.App.Services.Animations.FadeSlideIn(...)
+   at DeskFlow.App.SettingsWindow.<.ctor>b__4_0(...)
+```
+
+异常发生在 `Loaded` 里，WPF 已经把窗口框架画出来了、内容还没渲染，于是就是白屏 + 一条 crash.log。
+
+修法：`Animations` 检测到目标是 `Window` 时，动画自动改作用到它的 **Content** 元素上；并且三个动画方法都包了 try/catch，动画失败也只会"瞬显"，不会让界面白屏。

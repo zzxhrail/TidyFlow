@@ -13,8 +13,27 @@ public static class Animations
 {
     public static bool Enabled { get; set; } = true;
 
+    /// <summary>
+    /// Window 不允许设置 RenderTransform（WPF 会抛 "Transform is not valid for Window"），
+    /// 所以对窗口动画时改为作用于它的内容元素——内容能动、窗口本身只做透明度。
+    /// </summary>
+    private static UIElement Resolve(UIElement element) =>
+        element is Window { Content: UIElement content } ? content : element;
+
     /// <summary>淡入 + 轻微上移，用于窗口打开、内容区切换。</summary>
     public static void FadeSlideIn(UIElement element, double offsetY = 8, int milliseconds = 180)
+    {
+        try
+        {
+            FadeSlideInCore(element, offsetY, milliseconds);
+        }
+        catch (InvalidOperationException)
+        {
+            element.Opacity = 1;   // 动画不可用就保持可见，绝不因为动画挂掉界面
+        }
+    }
+
+    private static void FadeSlideInCore(UIElement element, double offsetY, int milliseconds)
     {
         if (element is null)
         {
@@ -28,6 +47,7 @@ public static class Animations
             return;
         }
 
+        element = Resolve(element);
         var transform = new TranslateTransform(0, offsetY);
         element.RenderTransform = transform;
         element.Opacity = 0;
@@ -75,6 +95,18 @@ public static class Animations
     /// <summary>弹出：缩放 0.94→1 + 淡入，用于对话框 / 卡片。</summary>
     public static void PopIn(FrameworkElement element, double fromScale = 0.94, int milliseconds = 180)
     {
+        try
+        {
+            PopInCore(element, fromScale, milliseconds);
+        }
+        catch (InvalidOperationException)
+        {
+            element.Opacity = 1;
+        }
+    }
+
+    private static void PopInCore(FrameworkElement element, double fromScale, int milliseconds)
+    {
         if (element is null)
         {
             return;
@@ -85,6 +117,11 @@ public static class Animations
             element.Opacity = 1;
             element.RenderTransform = Transform.Identity;
             return;
+        }
+
+        if (element is Window { Content: FrameworkElement windowContent })
+        {
+            element = windowContent;
         }
 
         var transform = new ScaleTransform(fromScale, fromScale);
@@ -122,6 +159,7 @@ public static class Animations
             return;
         }
 
+        element = Resolve(element);
         var transform = new TranslateTransform(fromX, 0);
         element.RenderTransform = transform;
         element.Opacity = 0;
