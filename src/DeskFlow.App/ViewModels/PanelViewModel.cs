@@ -276,8 +276,21 @@ public sealed class PanelViewModel : ObservableObject
             source = FileSource.Unknown;
         }
 
+        SetAutoDownload(source, enabled);
+    }
+
+    /// <summary>按来源改"自动下载"，同时把面板顶部的勾选状态同步过去（托盘菜单也会调这里）。</summary>
+    public void SetAutoDownload(FileSource source, bool enabled)
+    {
         _settings.SetAutoDownload(source, enabled);
-        Log($"{toggle.Name} 自动下载 = {(enabled ? "开" : "关")}");
+
+        var toggle = Sources.FirstOrDefault(t => string.Equals(t.SourceKey, source.ToString(), StringComparison.OrdinalIgnoreCase));
+        if (toggle is not null && toggle.AutoDownload != enabled)
+        {
+            toggle.AutoDownload = enabled;
+        }
+
+        Log($"{source.DisplayName()} 自动下载 = {(enabled ? "开" : "关")}");
     }
 
     public async Task AcceptPendingAsync(PanelTile tile)

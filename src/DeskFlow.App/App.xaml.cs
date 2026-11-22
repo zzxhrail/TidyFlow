@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using DeskFlow.App.Cli;
 using DeskFlow.App.Install;
+using DeskFlow.App.Services;
 using DeskFlow.App.ViewModels;
 using DeskFlow.Core.Categorization;
 using DeskFlow.Core.Models;
@@ -26,6 +28,9 @@ public partial class App : Application
     public static CategoryCatalog Categories { get; private set; } = null!;
 
     public static PanelViewModel Panel { get; private set; } = null!;
+
+    /// <summary>系统托盘（面板收起来后程序继续在这里）。</summary>
+    public static TrayIconService? Tray { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -92,6 +97,14 @@ public partial class App : Application
             MainWindow = panelWindow;
             panelWindow.Show();
 
+            Tray = new TrayIconService(
+                Panel,
+                Settings,
+                showPanel: ShowPanelFromTray,
+                openSettings: OpenSettingsFromTray,
+                restart: RestartApplication,
+                exit: ExitApplication);
+
             Panel.StartWatching();
             Panel.ImportRecent(TimeSpan.FromMinutes(30));
         }
@@ -102,9 +115,87 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// 托盘"打开面板"：面板被意外关掉（例如某些情况下 Alt+F4）时重新建一个，
+    /// 而不是让托盘图标点不动。
+    /// </summary>
+    private static void ShowPanelFromTray()
+    {
+        if (Current.MainWindow is DesktopPanelWindow existing && existing.IsLoaded)
+        {
+            existing.ShowFromTray();
+            return;
+        }
+
+        var panel = new DesktopPanelWindow(Panel, Settings);
+        Current.MainWindow = panel;
+        panel.Show();
+    }
+
+    /// <summary>托盘菜单"设置…"：面板开着就以它为 owner，否则独立弹。</summary>
+    private static void OpenSettingsFromTray()
+    {
+        var owner = Current.MainWindow is { IsVisible: true } ? Current.MainWindow : null;
+        var window = new SettingsWindow(Panel, Settings);
+
+        if (owner is not null)
+        {
+            window.Owner = owner;
+        }
+
+        window.ShowDialog();
+        Panel.RefreshAll();
+    }
+
+    /// <summary>托盘菜单"重新启动"：起一个新进程再退出自己，配置已先落盘。</summary>
+    private static void RestartApplication()
+    {
+        Settings.Save();
+        Panel.StopWatching();
+        AllowPanelClose();
+
+        var exe = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(exe))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(exe)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(exe) ?? Environment.CurrentDirectory,
+                });
+            }
+            catch (Exception)
+            {
+                // 起不来就不要退出，避免用户点了"重启"结果程序消失。
+                return;
+            }
+        }
+
+        Current.Shutdown(0);
+    }
+
+    private static void ExitApplication()
+    {
+        Settings.Save();
+        Panel.StopWatching();
+        AllowPanelClose();
+        Current.Shutdown(0);
+    }
+
+    /// <summary>真正退出前放开窗口的"关闭即收起"拦截。</summary>
+    private static void AllowPanelClose()
+    {
+        if (Current.MainWindow is DesktopPanelWindow panel)
+        {
+            panel.AllowClose = true;
+        }
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         Panel?.StopWatching();
+        Tray?.Dispose();
         Settings?.Save();
         base.OnExit(e);
     }

@@ -45,6 +45,10 @@ public partial class DesktopPanelWindow : Window
     private bool _collapsed;
     private bool _pinned;
     private double _heightBeforeMinimize;
+    private bool _trayHintShown;
+
+    /// <summary>由 App 在"真正退出/重启"前置为 true，允许窗口被关掉；平时点 × 只是收起。</summary>
+    public bool AllowClose { get; set; }
     private double _expandedHeight = 640;
     private double _maxPanelHeight = 640;
 
@@ -81,6 +85,19 @@ public partial class DesktopPanelWindow : Window
     /// 最小化后还原时，WPF 偶尔不重绘（历史 bug：还原后窗口一片空白）。
     /// 这里显式恢复尺寸并强制整树重绘，同时避免把 0 尺寸写进配置。
     /// </summary>
+    /// <summary>Alt+F4 / 任务栏关闭也会走到这里：默认不退出，收起到托盘。</summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!AllowClose)
+        {
+            e.Cancel = true;
+            HideToTray();
+            return;
+        }
+
+        base.OnClosing(e);
+    }
+
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
@@ -404,9 +421,38 @@ public partial class DesktopPanelWindow : Window
         window.Show();
     }
 
-    private void Exit_Click(object sender, RoutedEventArgs e)
+    /// <summary>面板右上角的 × 只是"收起来"：程序继续留在托盘里，右键托盘图标才有真正的退出。</summary>
+    private void Exit_Click(object sender, RoutedEventArgs e) => HideToTray();
+
+    /// <summary>隐藏到托盘（不退出进程）。第一次会弹一个气泡提示怎么回来。</summary>
+    public void HideToTray()
     {
         PersistGeometry();
-        Application.Current.Shutdown(0);
+        Hide();
+        Services.Diagnostics.Log($"hidden to tray, IsVisible={IsVisible}");
+
+        if (!_trayHintShown)
+        {
+            _trayHintShown = true;
+            App.Tray?.ShowBalloon("DeskFlow 仍在运行", "已收起到托盘。右键图标可打开设置、重新启动或退出。");
+        }
+    }
+
+    /// <summary>从托盘回到桌面：还原 + 激活。</summary>
+    public void ShowFromTray()
+    {
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+        Topmost = true;
+        Topmost = false;
     }
 }
