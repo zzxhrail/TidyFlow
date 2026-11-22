@@ -74,6 +74,13 @@ public partial class DesktopPanelWindow : Window
 
         // 空格快速预览（类似 macOS Quick Look）：鼠标悬停哪个文件，就预览哪个
         PreviewKeyDown += OnPanelKeyDown;
+
+        // 拖放：用 handledEventsToo 挂到窗口上。
+        // 之前挂在 XAML 属性上，拖到 ListBox / ScrollViewer 这些"自己会处理拖放"的子控件上时
+        // 事件被吞掉，表现就是"拖到中间那片区域没反应"。
+        AddHandler(DragDrop.DragOverEvent, new DragEventHandler(Panel_DragOver), handledEventsToo: true);
+        AddHandler(DragDrop.DragLeaveEvent, new DragEventHandler(Panel_DragLeave), handledEventsToo: true);
+        AddHandler(DragDrop.DropEvent, new DragEventHandler(Panel_Drop), handledEventsToo: true);
         Loaded += (_, _) => InstallSpacePreviewHook();
         Closed += (_, _) => UninstallSpacePreviewHook();
         LocationChanged += OnLocationChanged;
@@ -527,6 +534,8 @@ public partial class DesktopPanelWindow : Window
         return root == self || hwnd == self;
     }
 
+    private bool _dragging;
+
     private PanelTile? _hoverTile;
     private BrowseItem? _hoverBrowseItem;
 
@@ -721,6 +730,12 @@ public partial class DesktopPanelWindow : Window
             ? DragDropEffects.Move
             : DragDropEffects.Copy;
 
+        if (!_dragging)
+        {
+            _dragging = true;
+            Root.BorderBrush = (System.Windows.Media.Brush)FindResource("AccentBrush");
+        }
+
         var tileButton = FindTileButton(e.OriginalSource as DependencyObject);
         if (!ReferenceEquals(tileButton, _dropTarget))
         {
@@ -739,12 +754,23 @@ public partial class DesktopPanelWindow : Window
     private void Panel_DragLeave(object sender, DragEventArgs e)
     {
         RestoreDropTarget();
+        ResetDragVisual();
         e.Handled = true;
+    }
+
+    private void ResetDragVisual()
+    {
+        if (_dragging)
+        {
+            _dragging = false;
+            Root.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
+        }
     }
 
     private void Panel_Drop(object sender, DragEventArgs e)
     {
         RestoreDropTarget();
+        ResetDragVisual();
 
         if (!e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetData(DataFormats.FileDrop) is not string[] paths)
         {
@@ -754,6 +780,7 @@ public partial class DesktopPanelWindow : Window
         var tile = FindTileButton(e.OriginalSource as DependencyObject)?.Tag as PanelTile;
         var category = tile is { Kind: TileKind.Browse } ? tile.Title : null;
         var move = (e.KeyStates & DragDropKeyStates.ShiftKey) != 0;
+        Services.Diagnostics.Log($"drop: paths={paths.Length} tile={tile?.Kind.ToString() ?? "none"} category={category ?? "(auto)"} move={move}");
 
         _ = _viewModel.ImportDroppedAsync(paths, category, move);
         e.Handled = true;

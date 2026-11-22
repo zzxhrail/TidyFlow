@@ -4,7 +4,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="TidyFlow 面板" Icon="Assets/tidyflow.ico" Width="960" Height="800" MinWidth="320" MinHeight="380"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="True" Topmost="False"
-        Background="#FF202020" AllowDrop="True" DragOver="Panel_DragOver" DragLeave="Panel_DragLeave" Drop="Panel_Drop"
+        Background="#FF202020" AllowDrop="True"
         FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" TextOptions.TextFormattingMode="Display">
 
     <shell:WindowChrome.WindowChrome>
