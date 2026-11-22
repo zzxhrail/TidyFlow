@@ -131,17 +131,52 @@
                 <CheckBox x:Name="GlobalWatchCheck" Content="开启全局监听（整机任意目录只要落盘就收）"
                           FontWeight="SemiBold" />
                 <TextBlock Grid.Row="1" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#8A5A00" Background="#FFF4E5"
-                           Padding="10,8" Text="注意：命中的文件会被**移动**到归档目录，原位置不再保留副本。系统目录（Windows / Program Files / AppData / 回收站等）与归档目录本身不会被监听。" />
+                           Padding="10,8" Text="注意：命中的文件会被「移动」到归档目录，原位置不再保留副本。系统目录（Windows / Program Files / AppData / 回收站等）与归档目录本身不会被监听。" />
 
-                <Grid Grid.Row="2" Margin="0,14,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="文件类型" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBox x:Name="GlobalExtBox" Grid.Column="1" Padding="8,6"
-                             ToolTip="空格或逗号分隔，例如：.docx .pdf .xlsx .zip（留空 = 用默认的文档/图片/压缩包）" />
-                </Grid>
+                <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                    <DockPanel>
+                        <TextBlock Text="监听的文件类型" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ExtCountText" Foreground="#8A8F99" FontSize="11.5"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </DockPanel>
+
+                    <Border Background="White" BorderBrush="#E5E6EB" BorderThickness="1" CornerRadius="6"
+                            Padding="8,6" Margin="0,6,0,0" MinHeight="54" MaxHeight="120">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="ExtChipsControl">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#EEF3FF" BorderBrush="#C7D7FF" BorderThickness="1"
+                                                CornerRadius="11" Padding="9,3" Margin="0,0,6,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding}" FontSize="12" Foreground="#1F3A75" VerticalAlignment="Center" />
+                                                <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="9"
+                                                        Tag="{Binding}" Click="RemoveExt_Click"
+                                                        Background="Transparent" BorderThickness="0" Padding="0"
+                                                        Margin="6,0,0,0" Width="14" Height="14" MinWidth="0"
+                                                        Foreground="#5A6B8C" Cursor="Hand"
+                                                        ToolTip="移除这个类型" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="添加类型" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="NewExtBox" Width="150" Padding="6,4"
+                                 ToolTip="如 .psd 或 psd；可一次粘贴多个（空格/逗号分隔）" />
+                        <Button Content="添加" Click="AddExt_Click" Margin="8,0,0,0" />
+                        <Button Content="恢复默认" Click="ResetExt_Click" />
+                    </StackPanel>
+                </StackPanel>
 
                 <StackPanel Grid.Row="3" Margin="0,12,0,0">
                     <TextBlock Text="监听的根目录（默认所有固定硬盘）" FontWeight="SemiBold" Margin="0,0,0,6" />

@@ -16,6 +16,9 @@ public partial class SettingsWindow : Window
     private readonly PanelViewModel _viewModel;
     private readonly ArchiveSettings _settings;
 
+    /// <summary>全局监听的文件类型（界面上的小标签列表）。</summary>
+    private readonly System.Collections.ObjectModel.ObservableCollection<string> _extensions = new();
+
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
         InitializeComponent();
@@ -36,15 +39,81 @@ public partial class SettingsWindow : Window
     private void LoadGlobalWatch()
     {
         GlobalWatchCheck.IsChecked = _settings.GlobalWatchEnabled;
-        GlobalExtBox.Text = string.Join(' ', _settings.GlobalExtensions.Count > 0
+
+        _extensions.Clear();
+        var source = _settings.GlobalExtensions.Count > 0
             ? _settings.GlobalExtensions
-            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions);
+            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions.ToList();
+
+        foreach (var extension in NormalizeExtensions(source))
+        {
+            _extensions.Add(extension);
+        }
+
+        ExtChipsControl.ItemsSource = _extensions;
+        UpdateExtCount();
 
         var roots = _settings.GlobalRoots.Count > 0
             ? _settings.GlobalRoots
             : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots;
         GlobalRootsList.ItemsSource = new List<string>(roots);
     }
+
+    private static IEnumerable<string> NormalizeExtensions(IEnumerable<string> raw) =>
+        raw.Select(static e => (e ?? string.Empty).Trim().ToLowerInvariant())
+            .Select(static e => e.Length == 0 ? e : (e[0] == '.' ? e : "." + e))
+            .Where(static e => e.Length > 1)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    private void UpdateExtCount() => ExtCountText.Text = $"共 {_extensions.Count} 种";
+
+    private void AddExt_Click(object sender, RoutedEventArgs e)
+    {
+        var raw = NewExtBox.Text ?? string.Empty;
+        var added = 0;
+        foreach (var extension in NormalizeExtensions(raw.Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)))
+        {
+            if (_extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            _extensions.Add(extension);
+            added++;
+        }
+
+        NewExtBox.Text = string.Empty;
+        UpdateExtCount();
+        if (added == 0 && raw.Trim().Length > 0)
+        {
+            StatusTextPanel("这个类型已经在列表里了");
+        }
+    }
+
+    private void RemoveExt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string extension })
+        {
+            return;
+        }
+
+        _extensions.Remove(extension);
+        UpdateExtCount();
+    }
+
+    private void ResetExt_Click(object sender, RoutedEventArgs e)
+    {
+        _extensions.Clear();
+        foreach (var extension in NormalizeExtensions(DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions))
+        {
+            _extensions.Add(extension);
+        }
+
+        UpdateExtCount();
+    }
+
+    /// <summary>类型列表下方没有独立提示区，借用状态栏把话说了。</summary>
+    private void StatusTextPanel(string message) => ExtCountText.Text = message;
 
     private List<string> CurrentGlobalRoots() =>
         GlobalRootsList.Items.Cast<string>().Where(static r => !string.IsNullOrWhiteSpace(r)).ToList();
@@ -79,13 +148,6 @@ public partial class SettingsWindow : Window
 
     private void ResetGlobalRoots_Click(object sender, RoutedEventArgs e) =>
         GlobalRootsList.ItemsSource = new List<string>(DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots);
-
-    private List<string> GlobalExtensionsFromText(string? raw) =>
-        (raw ?? string.Empty)
-            .Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(static e => e.StartsWith('.') ? e : "." + e)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
     private async void RefreshWatchList()
     {
@@ -302,7 +364,7 @@ public partial class SettingsWindow : Window
 
         _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
         _settings.GlobalRoots = CurrentGlobalRoots();
-        _settings.GlobalExtensions = GlobalExtensionsFromText(GlobalExtBox.Text);
+        _settings.GlobalExtensions = _extensions.ToList();
         _settings.Save();
 
         // 全局监听配置变了就立即按新配置重开，不用重启程序

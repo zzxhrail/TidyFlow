@@ -45,7 +45,7 @@ public sealed class JsonSettingsStore : ISettingsStore
         {
             if (File.Exists(path))
             {
-                var text = File.ReadAllText(path);
+                var text = File.ReadAllText(path).TrimStart('\uFEFF');   // 记事本另存会带 BOM
                 return JsonNode.Parse(text) as JsonObject ?? new JsonObject();
             }
         }

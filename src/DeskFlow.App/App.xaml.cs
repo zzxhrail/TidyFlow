@@ -93,6 +93,16 @@ public partial class App : Application
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
 
+            // --settings：直接打开设置（调试/给用户建快捷方式用）
+            if (e.Args.Any(static x => x.Equals("--settings", StringComparison.OrdinalIgnoreCase)))
+            {
+                var settingsOnly = new SettingsWindow(Panel, Settings);
+                MainWindow = settingsOnly;
+                settingsOnly.Closed += (_, _) => Shutdown(0);
+                settingsOnly.Show();
+                return;
+            }
+
             var panelWindow = new DesktopPanelWindow(Panel, Settings);
             MainWindow = panelWindow;
             panelWindow.Show();
