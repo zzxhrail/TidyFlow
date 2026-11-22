@@ -57,6 +57,9 @@ public sealed class PanelViewModel : ObservableObject
 
     public ObservableCollection<PanelTile> Categories { get; } = new();
 
+    /// <summary>固定位置（归档目录）：不跟用户快捷方式混在一起，永远在「应用与快捷方式」顶部。</summary>
+    public ObservableCollection<PanelTile> SystemPlaces { get; } = new();
+
     public string Status
     {
         get => _status;
@@ -1028,7 +1031,7 @@ public sealed class PanelViewModel : ObservableObject
     private int RelayoutTiles()
     {
         var count = 0;
-        foreach (var tile in Shortcuts.Concat(PendingFiles).Concat(RecentFiles).Concat(Categories))
+        foreach (var tile in SystemPlaces.Concat(Shortcuts).Concat(PendingFiles).Concat(RecentFiles).Concat(Categories))
         {
             ApplyGeometry(tile);
             count++;
@@ -1416,6 +1419,15 @@ public sealed class PanelViewModel : ObservableObject
 
     private void BuildShortcuts()
     {
+        // 归档目录单独一组，永远显示（以前混在快捷方式里，用户一加自己的快捷方式就没了）
+        SystemPlaces.Clear();
+        SystemPlaces.Add(MakeTile(
+            TileKind.Category,
+            "归档目录",
+            "文件夹",
+            ShellIconProvider.ForFolder(_settings.ArchiveRoot),
+            _settings.ArchiveRoot));
+
         Shortcuts.Clear();
         foreach (var item in _settings.Shortcuts)
         {
@@ -1436,6 +1448,11 @@ public sealed class PanelViewModel : ObservableObject
         {
             foreach (var seed in ShortcutSeeder.Seed())
             {
+                if (string.Equals(seed.Name, "归档目录", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;   // 已由 SystemPlaces 固定展示
+                }
+
                 Shortcuts.Add(MakeTile(
                     seed.IsFolder ? TileKind.Category : TileKind.Shortcut,
                     seed.Name,
