@@ -38,6 +38,8 @@ dist\DeskFlow.exe
 
 选输入目录 → 勾步骤 → 开始处理。日志区实时显示进度，取消按钮随时可中断（已完成的条目仍然有效）。
 
+![界面](docs/screenshot.png)
+
 ### 2.2 命令行（同一份可执行文件）
 
 ```powershell
