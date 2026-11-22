@@ -52,9 +52,12 @@
                     Padding="4,2,4,2" AutomationProperties.Name="{Binding Title}"
                     ToolTip="{Binding ToolTip}">
                 <StackPanel HorizontalAlignment="Center">
-                    <Image Source="{Binding Icon}" Width="26" Height="26" HorizontalAlignment="Center" />
+                    <Image Source="{Binding Icon}" HorizontalAlignment="Center"
+                           Width="{Binding CompactIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                           Height="{Binding CompactIconSize, RelativeSource={RelativeSource AncestorType=Window}}" />
                     <TextBlock Text="{Binding Title}" FontSize="9.5" Margin="0,2,0,0" Width="48"
                                TextAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding CompactBar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVisibility}}"
                                Foreground="{StaticResource TextSecondaryBrush}" />
                 </StackPanel>
             </Button>

@@ -380,6 +380,30 @@ public partial class DesktopPanelWindow : Window
 
     private const double CollapsedHeight = 92;   // 收起条默认高度（用户可拖拽调整，会记住）
 
+    /// <summary>收起条是否处于"只显示图标"的紧凑模式（文字隐藏）。</summary>
+    public static readonly DependencyProperty CompactBarProperty = DependencyProperty.Register(
+        nameof(CompactBar), typeof(bool), typeof(DesktopPanelWindow), new PropertyMetadata(false));
+
+    public bool CompactBar
+    {
+        get => (bool)GetValue(CompactBarProperty);
+        set
+        {
+            SetValue(CompactBarProperty, value);
+            SetValue(CompactIconSizeProperty, value ? 20d : 26d);
+        }
+    }
+
+    public static readonly DependencyProperty CompactIconSizeProperty = DependencyProperty.Register(
+        nameof(CompactIconSize), typeof(double), typeof(DesktopPanelWindow), new PropertyMetadata(26d));
+
+    /// <summary>收起条图标尺寸：普通 26，紧凑（矮条）18。</summary>
+    public double CompactIconSize
+    {
+        get => (double)GetValue(CompactIconSizeProperty);
+        set => SetValue(CompactIconSizeProperty, value);
+    }
+
     private bool _topmostBeforeCollapse;
     private bool _suppressSnap;   // 吸附过程中改 Left/Top 会再触发 LocationChanged，防抖
 
@@ -423,7 +447,7 @@ public partial class DesktopPanelWindow : Window
         var top = Top;
         var right = left + ActualWidth;
         var bottom = top + ActualHeight;
-        const double snap = 24;
+        const double snap = 10;   // 只有真正贴到边才吸附/触发隐藏
 
         _dockEdge = DockEdge.None;
 
@@ -534,6 +558,18 @@ public partial class DesktopPanelWindow : Window
     }
 
     /// <summary>鼠标离开后重新开始 650ms 计时，让它能再次隐去。</summary>
+    /// <summary>收起条很矮时只显示图标（文字消失），这样下限可以做到 56 DIP 而不切字。</summary>
+    private void UpdateCompactMode()
+    {
+        if (!_collapsed)
+        {
+            CompactBar = false;
+            return;
+        }
+
+        CompactBar = Height < 96;
+    }
+
     /// <summary>量一下收起条"一行图标 + 名字"需要多高，作为收起态的最小高度。</summary>
     private double MeasureCollapsedBarHeight()
     {
@@ -740,13 +776,14 @@ public partial class DesktopPanelWindow : Window
             _expandedHeight = Height;
             _topmostBeforeCollapse = Topmost;
 
-            // 最小高度 = 收起条的自然高度：一行图标 + 文字刚好放得下，再矮就会切字
+            // 下限 56 DIP：低于 84 DIP 时自动进入"只显示图标"的紧凑模式，所以不会再切字
             var natural = MeasureCollapsedBarHeight();
-            MinHeight = natural;
+            MinHeight = 72;
             MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
             BodyScroller.Visibility = Visibility.Collapsed;
             CollapsedBar.Visibility = Visibility.Visible;
-            Height = Math.Clamp(_settings.PanelCollapsedHeight, natural, Math.Max(320, SystemParameters.WorkArea.Height - 24));
+            Height = Math.Clamp(_settings.PanelCollapsedHeight, 72, Math.Max(320, SystemParameters.WorkArea.Height - 24));
+            UpdateCompactMode();
 
             // 收起后置顶，随时能点到（用户也可以再点按钮取消）
             Topmost = true;
