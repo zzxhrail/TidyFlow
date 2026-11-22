@@ -98,7 +98,7 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                         <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
                                 ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
-                        <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 文件盘点）" Click="OpenMoreMenu_Click" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 扫描磁盘）" Click="OpenMoreMenu_Click" />
                         <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />
                         <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="收起到托盘（程序继续运行）" Click="Exit_Click" />
                     </StackPanel>

@@ -292,7 +292,7 @@ public static class CliHost
     private static void PrintHelp()
     {
         Console.WriteLine("""
-            DeskFlow —— 批量文件盘点与报表工具
+            TidyFlow —— 命令行盘点（不发界面，给脚本用）
 
             用法:
               DeskFlow.exe --run <输入路径> [--out <输出目录>] [--steps a,b,c] [--no-recurse] [--stop-on-error]

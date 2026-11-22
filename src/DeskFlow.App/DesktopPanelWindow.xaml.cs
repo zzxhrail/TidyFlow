@@ -412,7 +412,6 @@ public partial class DesktopPanelWindow : Window
                 AddShortcutInteractive();
                 break;
             case TileKind.Batch:
-                OpenBatchWindow();
                 break;
             case TileKind.Settings:
                 OpenSettingsWindow();
@@ -1152,7 +1151,7 @@ public partial class DesktopPanelWindow : Window
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettingsWindow();
 
-    /// <summary>标题栏「更多」：把归档记录 / 设置 / 文件盘点收进一个菜单，给标题腾地方。</summary>
+    /// <summary>标题栏「更多」：把归档记录 / 设置 / 扫描磁盘收进一个菜单，给标题腾地方。</summary>
     /// <summary>"⋯"菜单顶部显示版本号：用户能一眼确认自己跑的是哪一版（避免"我明明是新的"却看到旧界面）。</summary>
     private void OpenMoreMenu_Click(object sender, RoutedEventArgs e)
     {
@@ -1171,12 +1170,9 @@ public partial class DesktopPanelWindow : Window
         menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemFor("扫描磁盘…", OpenScanInteractive));
-        menu.Items.Add(MenuItemFor("文件盘点（批处理）", OpenBatchInteractive));
         menu.PlacementTarget = sender as UIElement;
         menu.IsOpen = true;
     }
-
-    private void OpenBatchInteractive() => OpenBatchWindow();
 
     private void OpenScanInteractive()
     {
@@ -1193,8 +1189,6 @@ public partial class DesktopPanelWindow : Window
         _viewModel.RefreshAll();
     }
 
-    private void OpenBatch_Click(object sender, RoutedEventArgs e) => OpenBatchWindow();
-
     private void OpenSettingsWindow()
     {
         var window = new SettingsWindow(_viewModel, _settings) { Owner = this };
@@ -1202,11 +1196,6 @@ public partial class DesktopPanelWindow : Window
         _viewModel.RefreshAll();
     }
 
-    private void OpenBatchWindow()
-    {
-        var window = new MainWindow { Owner = this };
-        window.Show();
-    }
 
     /// <summary>面板右上角的 × 只是"收起来"：程序继续留在托盘里，右键托盘图标才有真正的退出。</summary>
     private void Exit_Click(object sender, RoutedEventArgs e) => HideToTray();
