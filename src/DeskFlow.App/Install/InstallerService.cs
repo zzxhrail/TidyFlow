@@ -53,11 +53,32 @@ public static class InstallerService
             report?.Invoke("安装完成", 100);
             return new DeploymentResult(true, target);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception ex)
         {
-            return new DeploymentResult(false, ex.Message);
+            LogFailure("安装", ex);
+            return new DeploymentResult(false, Describe(ex));
         }
     }
+
+    /// <summary>把失败写进 install.log：真机上"点了就闪退"必须有证据可查。</summary>
+    private static void LogFailure(string stage, Exception ex)
+    {
+        try
+        {
+            var path = Path.Combine(Infrastructure.AppPaths.RootDirectory, "install.log");
+            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {stage} 失败{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    private static string Describe(Exception ex) => ex switch
+    {
+        UnauthorizedAccessException => "没有写入权限：" + ex.Message,
+        IOException => "文件被占用或写入失败（关掉正在运行的 TidyFlow 再试）：" + ex.Message,
+        _ => ex.GetType().Name + "：" + ex.Message,
+    };
 
     public static DeploymentResult Uninstall(bool keepUserData, Action<string, int>? report = null)
     {

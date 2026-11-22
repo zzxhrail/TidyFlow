@@ -119,8 +119,22 @@ public partial class InstallerWindow : Window
         });
 
         var startedAt = DateTime.UtcNow;
-        var result = await Task.Run(() => InstallerService.Install(effective, (message, percent) =>
-            ((IProgress<(string, int)>)progress).Report((message, percent))));
+        DeploymentResult result;
+        try
+        {
+            result = await Task.Run(() => InstallerService.Install(effective, (message, percent) =>
+                ((IProgress<(string, int)>)progress).Report((message, percent))));
+        }
+        catch (Exception ex)
+        {
+            // async void 里漏出去的异常会直接结束进程（"点开始安装就闪退"），这里必须兜住
+            ToggleBusy(false);
+            Progress.IsIndeterminate = false;
+            StatusText.Foreground = System.Windows.Media.Brushes.Firebrick;
+            StatusText.Text = "安装失败：" + ex.GetType().Name + " — " + ex.Message;
+            PercentText.Text = string.Empty;
+            return;
+        }
 
         // 机器快的时候 66 MB 复制不到 200ms 就完了，进度条一闪而过；
         // 这里给它一个最短 1.2 秒的可见时长（真实结果早就返回了，只是让过程看得见）

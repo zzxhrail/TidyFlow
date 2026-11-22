@@ -464,3 +464,17 @@ SSD 上 66 MB 复制不到 200ms，进度一闪而过，所以加了**最短 1.2
 另外顺手：图标按扩展名缓存并 `Freeze()`（已在上一版）、日志只保留最近 200 条、状态栏只显示最近 3 行。
 
 空闲占用实测：面板常驻、两份监听目录在跑，**10 秒内 CPU 约 0.42%（单核百分比）**，内存 250 MB 左右。
+
+### 安装闪退修复（0.8.3）
+
+症状：点「开始安装」窗口直接消失。根因与修法：
+
+| 问题 | 说明 |
+| --- | --- |
+| async void 里漏出的异常 | 安装逻辑在 Task.Run 里抛的任何异常都会从 await 冒出来，async void 捕获不到 → 整个进程结束（没有任何提示，就是闪退） |
+| 只用 dynamic 调 WScript.Shell | 快捷方式那段用 C# 动态绑定，部分机器会抛 RuntimeBinderException / COMException，恰好不在原来的异常过滤名单里 |
+| 异常过滤太窄 | 原来只 catch IOException / UnauthorizedAccessException / ArgumentException，其余直接上抛 |
+
+现在：快捷方式改成反射调用（不依赖 C# 绑定器）、Install/Uninstall 改成 catch (Exception) 并归类成可读文案、界面里的 await 也包了 try/catch —— 失败只会显示一行红字，不会再退出。
+
+失败会写 %LOCALAPPDATA%\DeskFlow\install.log（含完整堆栈），以后再遇到问题直接看这个文件。

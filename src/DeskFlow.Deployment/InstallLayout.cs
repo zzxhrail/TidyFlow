@@ -16,7 +16,7 @@ public sealed record DeploymentResult(bool Success, string Message);
 public static class InstallLayout
 {
     public const string ProductName = "TidyFlow";
-    public const string DisplayName = "DeskFlow 文件管家";
+    public const string DisplayName = "TidyFlow 文件管家";
     public const string Publisher = "DeskFlow";
 
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -114,20 +114,38 @@ public static class InstallLayout
             ?? throw new InvalidOperationException("系统缺少 WScript.Shell，无法创建快捷方式");
 
         object? shell = null;
+        object? link = null;
         try
         {
+            // 用反射而不是 dynamic：dynamic 会拉起 C# 绑定器，
+            // 在单文件发布/裁剪过的程序里可能抛 RuntimeBinderException，
+            // 而它不在 InstallerService 的异常过滤范围内，会把安装界面直接带崩。
             shell = Activator.CreateInstance(shellType);
-            dynamic dshell = shell!;
-            dynamic link = dshell.CreateShortcut(shortcutPath);
-            link.TargetPath = targetPath;
-            link.WorkingDirectory = workingDirectory;
-            link.IconLocation = targetPath + ",0";
-            link.Description = description;
-            link.WindowStyle = 1;
-            link.Save();
+            link = shellType.InvokeMember("CreateShortcut", System.Reflection.BindingFlags.InvokeMethod, null, shell, [shortcutPath]);
+
+            if (link is null)
+            {
+                throw new InvalidOperationException("创建快捷方式失败：CreateShortcut 返回空");
+            }
+
+            var linkType = link.GetType();
+            void Set(string name, object value) =>
+                linkType.InvokeMember(name, System.Reflection.BindingFlags.SetProperty, null, link, [value]);
+
+            Set("TargetPath", targetPath);
+            Set("WorkingDirectory", workingDirectory);
+            Set("IconLocation", targetPath + ",0");
+            Set("Description", description);
+            Set("WindowStyle", 1);
+            linkType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, link, null);
         }
         finally
         {
+            if (link is not null)
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(link);
+            }
+
             if (shell is not null)
             {
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
