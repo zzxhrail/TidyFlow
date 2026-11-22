@@ -567,6 +567,20 @@ public partial class DesktopPanelWindow : Window
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettingsWindow();
 
+    /// <summary>标题栏「更多」：把归档记录 / 设置 / 文件盘点收进一个菜单，给标题腾地方。</summary>
+    private void OpenMoreMenu_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu();
+        menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
+        menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItemFor("文件盘点（批处理）", OpenBatchInteractive));
+        menu.PlacementTarget = sender as UIElement;
+        menu.IsOpen = true;
+    }
+
+    private void OpenBatchInteractive() => OpenBatchWindow();
+
     /// <summary>归档记录：查看每条归档的来源，并可把文件放回原位置。</summary>
     private void OpenHistory_Click(object sender, RoutedEventArgs e)
     {

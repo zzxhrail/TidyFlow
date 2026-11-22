@@ -18,19 +18,21 @@
 
         <DataTemplate x:Key="TileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
+                    HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
-                <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}">
-                    <Image Source="{Binding Icon}" HorizontalAlignment="Center"
+                <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}"
+                            HorizontalAlignment="Left">
+                    <Image Source="{Binding Icon}" HorizontalAlignment="Left"
                            Width="{Binding IconSize}" Height="{Binding IconSize}" />
                     <TextBlock Text="{Binding TitleText}" Foreground="{StaticResource TextPrimaryBrush}"
-                               TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"
+                               TextWrapping="Wrap" TextAlignment="Left" Margin="0,6,0,0"
                                Width="{Binding BoxWidth}"
                                FontSize="{Binding TitleFontSize}"
                                LineHeight="{Binding LineHeight}"
                                LineStackingStrategy="BlockLineHeight"
                                MaxHeight="{Binding MaxTitleHeight}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding SubtitleText}" Foreground="{StaticResource TextTertiaryBrush}"
-                               TextAlignment="Center" Margin="0,3,0,0" TextWrapping="NoWrap"
+                               TextAlignment="Left" Margin="0,3,0,0" TextWrapping="NoWrap"
                                Width="{Binding BoxWidth}"
                                FontSize="{Binding SubtitleFontSize}"
                                Visibility="{Binding ShowSubtitle, Converter={StaticResource BoolToVisibility}}" />
@@ -75,9 +77,7 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                             <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
                                     ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
-                            <Button Style="{StaticResource IconButton}" Content="&#xE81C;" ToolTip="归档记录 · 可撤销" Click="OpenHistory_Click" />
-                            <Button Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="设置" Click="OpenSettings_Click" />
-                            <Button Style="{StaticResource IconButton}" Content="&#xE8EF;" ToolTip="批处理 · 文件盘点" Click="OpenBatch_Click" />
+                            <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 文件盘点）" Click="OpenMoreMenu_Click" />
                             <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />
                             <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="收起到托盘（程序继续运行）" Click="Exit_Click" />
                         </StackPanel>
