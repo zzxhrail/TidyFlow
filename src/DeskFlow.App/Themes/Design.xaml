@@ -435,18 +435,35 @@
     </Style>
 
     <!-- ============ 滚动条（Win11 极细） ============ -->
+    <!-- ============ 滚动条（Win11：4px 胶囊，悬停变 6px 加深） ============ -->
     <Style x:Key="FluentScrollThumb" TargetType="Thumb">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border CornerRadius="2" Background="#66FFFFFF" Margin="1,0" />
+                    <Grid Background="Transparent">
+                        <Border x:Name="Bar" Width="4" CornerRadius="2" Background="#59FFFFFF"
+                                HorizontalAlignment="Center" VerticalAlignment="Stretch" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bar" Property="Width" Value="6" />
+                            <Setter TargetName="Bar" Property="CornerRadius" Value="3" />
+                            <Setter TargetName="Bar" Property="Background" Value="#8CFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Bar" Property="Width" Value="6" />
+                            <Setter TargetName="Bar" Property="CornerRadius" Value="3" />
+                            <Setter TargetName="Bar" Property="Background" Value="#B3FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style TargetType="ScrollBar">
-        <Setter Property="Width" Value="6" />
+        <Setter Property="Width" Value="12" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Template">
             <Setter.Value>
