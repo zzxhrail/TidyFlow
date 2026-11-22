@@ -78,3 +78,47 @@ WPF 用 `DelegateObserver` 切回 UI 线程，命令行用 `TextWriterObserver`�
 | 中文/空格路径 | 全程 `Path` API + 参数加引号；CSV 用 UTF-8 BOM |
 | 权限 | 不要求管理员；输出目录默认在"文档"，不碰 Program Files |
 | 卸载残留 | 只写 `%LOCALAPPDATA%\DeskFlow`，删除即干净 |
+
+---
+
+# 附：桌面面板与监听归档（v0.3 新增）
+
+## 1. 新增分层
+
+```
+Core
+  Models            FileSource / CategoryDefinition / FileRecord / IncomingFile / WatchTarget / ArchiveOptions
+  Categorization    DefaultCategories(6 类 + 兜底) / CategoryCatalog(解析 + 同名并集 + 用户类别)
+Infrastructure
+  Watch             SourceDirectoryResolver(探测 QQ/微信/钉钉/下载目录) / IncomingWatcher(轮询 + 写完检测)
+  Archive           FileArchiver(按类别落盘 / 判重 / 改名 (2) / 复制或移动)
+  Index             JsonArchiveIndex(archive-index.json，原子写)
+  Settings          ArchiveSettings(自动下载开关 / 归档根 / 自定义类别 / 快捷方式 / 面板坐标)
+  Services          ShellLauncher(打开 / 定位)
+App
+  DesktopPanelWindow   桌面面板（无边框、4 列图标、可拖动、收起、限高滚动）
+  SettingsWindow       来源与自动下载 / 归档位置 / 分类规则 / 快捷方式
+  PanelViewModel       监听事件 → 自动归档或待接收 → 刷新四块列表
+  Services             ShellIconProvider(SHGetFileInfo 取系统真实图标) / ShortcutSeeder
+```
+
+## 2. 一次"收到文件"的完整时序
+
+```
+IncomingWatcher.ScanOnce()       每 2s；文件大小连续两轮相同才上报
+  → FileDetected 事件
+  → PanelViewModel.HandleDetected
+      → CategoryCatalog.Resolve(扩展名)
+      → ArchiveSettings.IsAutoDownload(source)?
+          是 → FileArchiver.ArchiveAsync → JsonArchiveIndex.Upsert → BuildRecent/BuildCategories
+          否 → 记录 Status=Pending → 落到面板"待接收"
+  → 面板刷新（全部集合只在 Dispatcher 线程改）
+```
+
+## 3. 不变量
+
+1. 归档只搬不删（除非 `MoveInsteadOfCopy`），原件路径始终留在记录里（`SourcePath`）。
+2. 类别永远有兜底：解析不到 → 「其他」，不会出现无类别落盘。
+3. 同名判重是"长度 + 首 1MB 哈希"，判非同则改名 `name (2).ext`，绝不覆盖已有文件。
+4. 索引写失败只影响历史展示，不影响归档本身（先落盘后记账）。
+5. 面板中所有跨线程更新经 `Dispatcher.BeginInvoke`，不在后台线程碰 UI 集合。
