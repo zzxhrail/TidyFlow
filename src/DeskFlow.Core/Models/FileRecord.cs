@@ -1,0 +1,51 @@
+namespace DeskFlow.Core.Models;
+
+public enum ArchiveStatus
+{
+    Pending = 0,
+    Archived = 1,
+    Ignored = 2,
+    Failed = 3,
+}
+
+/// <summary>一条文件记录：来源、归类、落盘位置、状态。面板与索引都读它。</summary>
+public sealed class FileRecord
+{
+    public required string Id { get; init; }
+
+    /// <summary>原始文件绝对路径（聊天工具目录里的原件）。</summary>
+    public required string SourcePath { get; init; }
+
+    public required string FileName { get; init; }
+
+    public required long SizeBytes { get; init; }
+
+    public required FileSource Source { get; init; }
+
+    public required string Category { get; set; }
+
+    public ArchiveStatus Status { get; set; } = ArchiveStatus.Pending;
+
+    /// <summary>归档后的绝对路径；未归档时为 null。</summary>
+    public string? ArchivedPath { get; set; }
+
+    public DateTimeOffset DetectedAt { get; init; } = DateTimeOffset.Now;
+
+    public DateTimeOffset? ArchivedAt { get; set; }
+
+    public string? Error { get; set; }
+
+    public string? Hash { get; set; }
+
+    public string DisplayPath => ArchivedPath ?? SourcePath;
+
+    public string Extension => Path.GetExtension(FileName).ToLowerInvariant();
+
+    public string StatusText => Status switch
+    {
+        ArchiveStatus.Archived => "已归档",
+        ArchiveStatus.Ignored => "已忽略",
+        ArchiveStatus.Failed => "失败",
+        _ => "待接收",
+    };
+}
