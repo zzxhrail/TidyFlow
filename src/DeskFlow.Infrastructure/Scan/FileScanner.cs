@@ -37,6 +37,9 @@ public sealed class ScanOptions
     /// <summary>最多返回多少条，防止整盘扫描把内存吃满。</summary>
     public int MaxResults { get; init; } = 5000;
 
+    /// <summary>最多进多少个目录（防止扫到网络盘/异常设备时卡死）。</summary>
+    public int MaxDirectories { get; init; } = 300_000;
+
     /// <summary>额外排除的目录（归档目录、配置目录等）。</summary>
     public IReadOnlyList<string> ExcludedPaths { get; init; } = [];
 }
@@ -83,6 +86,7 @@ public static class FileScanner
 
         var scannedDirectories = 0;
         var stack = new Stack<string>(options.Roots.Where(Directory.Exists));
+        var lastReport = DateTime.MinValue;
 
         while (stack.Count > 0 && results.Count < options.MaxResults)
         {
@@ -95,8 +99,17 @@ public static class FileScanner
             }
 
             scannedDirectories++;
-            if (scannedDirectories % 40 == 0)
+            if (scannedDirectories > options.MaxDirectories)
             {
+                break;
+            }
+
+            // 进度最多每 250ms 报一次：整盘扫描时目录数上万，
+            // 每 40 个报一次会把 UI 线程刷爆（表现就是"点了扫描就卡死"）
+            var now = DateTime.UtcNow;
+            if ((now - lastReport).TotalMilliseconds >= 250)
+            {
+                lastReport = now;
                 progress?.Report(new ScanProgress(scannedDirectories, results.Count, current));
             }
 
@@ -107,7 +120,7 @@ public static class FileScanner
                 subdirectories = Directory.EnumerateDirectories(current);
                 files = Directory.EnumerateFiles(current);
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 continue;
             }
@@ -125,7 +138,7 @@ public static class FileScanner
                         continue;
                     }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
                     continue;
                 }
@@ -174,7 +187,7 @@ public static class FileScanner
                         continue;
                     }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
                     continue;
                 }

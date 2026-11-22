@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -57,7 +56,7 @@ public sealed class ScanRow : INotifyPropertyChanged
 public partial class ScanWindow : Window
 {
     private readonly PanelViewModel _viewModel;
-    private readonly ObservableCollection<ScanRow> _rows = [];
+    private List<ScanRow> _rows = [];
     private CancellationTokenSource? _cts;
 
     public ScanWindow(PanelViewModel viewModel)
@@ -75,9 +74,27 @@ public partial class ScanWindow : Window
     {
         DrivePanel.Children.Clear();
 
-        foreach (var drive in DriveInfo.GetDrives())
+        DriveInfo[] drives;
+        try
         {
-            if (drive.DriveType is not (DriveType.Fixed or DriveType.Removable) || !drive.IsReady)
+            drives = DriveInfo.GetDrives();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            return;
+        }
+
+        foreach (var drive in drives)
+        {
+            try
+            {
+                if (drive.DriveType is not (DriveType.Fixed or DriveType.Removable) || !drive.IsReady)
+                {
+                    continue;
+                }
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 continue;
             }
@@ -135,7 +152,8 @@ public partial class ScanWindow : Window
             return;
         }
 
-        _rows.Clear();
+        _rows = [];
+        ResultList.ItemsSource = _rows;
         ScanButton.IsEnabled = false;
         StopButton.IsEnabled = true;
         _cts = new CancellationTokenSource();
@@ -155,10 +173,11 @@ public partial class ScanWindow : Window
         try
         {
             var items = await FileScanner.ScanAsync(options, progress, _cts.Token);
-            foreach (var item in items)
-            {
-                _rows.Add(new ScanRow(item));
-            }
+
+            // 一次性塞进去：之前是逐条 Add，5000 条会触发 5000 次 CollectionChanged，
+            // ListView 每次都重排，界面直接卡死（"点了扫描就卡退"的真凶之一）
+            _rows = items.Select(static i => new ScanRow(i)).ToList();
+            ResultList.ItemsSource = _rows;
 
             var totalBytes = items.Sum(static i => i.SizeBytes);
             SummaryText.Text = $"扫到 {items.Count} 个文件，合计 {new ScanItem("x", totalBytes, DateTime.Now).SizeText}";
@@ -215,10 +234,8 @@ public partial class ScanWindow : Window
         var done = await _viewModel.ImportDroppedAsync(selected, null, move: false);
         StatusText.Text = $"已归档 {done}/{selected.Count} 个文件";
 
-        foreach (var row in _rows.Where(static r => r.IsChecked).ToList())
-        {
-            _rows.Remove(row);
-        }
+        _rows = _rows.Where(static r => !r.IsChecked).ToList();
+        ResultList.ItemsSource = _rows;
     }
 
     private void Reveal_Click(object sender, RoutedEventArgs e)

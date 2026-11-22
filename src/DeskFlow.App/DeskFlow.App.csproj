@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,22 +7,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\tidyflow.ico</ApplicationIcon>
-    <!-- 托盘图标用 WinForms 的 NotifyIcon（最省事、行为最接近系统原生） -->
+    <!-- 鎵樼洏鍥炬爣鐢?WinForms 鐨?NotifyIcon锛堟渶鐪佷簨銆佽涓烘渶鎺ヨ繎绯荤粺鍘熺敓锛?-->
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>TidyFlow</AssemblyName>
     <RootNamespace>DeskFlow.App</RootNamespace>
     <Product>TidyFlow</Product>
-    <AssemblyTitle>TidyFlow 文件管家</AssemblyTitle>
-    <Version>0.8.0</Version>
-    <FileVersion>0.8.0.0</FileVersion>
-    <AssemblyVersion>0.8.0.0</AssemblyVersion>
+    <AssemblyTitle>TidyFlow 鏂囦欢绠″</AssemblyTitle>
+    <Version>0.8.1</Version>
+    <FileVersion>0.8.1.0</FileVersion>
+    <AssemblyVersion>0.8.1.0</AssemblyVersion>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- WinForms 打开后会往全局注入 System.Windows.Forms/System.Drawing 的 using，
-         跟 WPF 的 Application / MenuItem 撞名，这里去掉，需要的地方显式 using -->
+    <!-- WinForms 鎵撳紑鍚庝細寰€鍏ㄥ眬娉ㄥ叆 System.Windows.Forms/System.Drawing 鐨?using锛?         璺?WPF 鐨?Application / MenuItem 鎾炲悕锛岃繖閲屽幓鎺夛紝闇€瑕佺殑鍦版柟鏄惧紡 using -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>

@@ -92,8 +92,42 @@ public partial class App : Application
         }
     }
 
+    /// <summary>卡退类问题必须留证据：任何未处理异常都写一份 crash.log。</summary>
+    private static void HookCrashLogging()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            WriteCrash("AppDomain", args.ExceptionObject as Exception);
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            WriteCrash("UnobservedTask", args.Exception);
+            args.SetObserved();
+        };
+
+        Current.DispatcherUnhandledException += (_, args) =>
+        {
+            WriteCrash("Dispatcher", args.Exception);
+        };
+    }
+
+    private static void WriteCrash(string source, Exception? ex)
+    {
+        try
+        {
+            var path = Path.Combine(Infrastructure.AppPaths.RootDirectory, "crash.log");
+            var text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
+            File.AppendAllText(path, text);
+        }
+        catch (IOException)
+        {
+        }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        HookCrashLogging();
         base.OnStartup(e);
         AppPaths.EnsureCreated();
 
