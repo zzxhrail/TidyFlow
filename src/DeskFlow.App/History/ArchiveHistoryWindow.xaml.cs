@@ -36,7 +36,19 @@ public partial class ArchiveHistoryWindow : Window
             record.Source.DisplayName(),
             Path.GetDirectoryName(record.SourcePath) ?? record.SourcePath)).ToList();
 
+        foreach (var row in _rows)
+        {
+            row.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(Row.IsChecked))
+                {
+                    UpdateUndoButton();
+                }
+            };
+        }
+
         RecordList.ItemsSource = _rows;
+        UpdateUndoButton();
 
         // 整批撤销：列出"同类别 + 15 秒内"的归档批次
         var selectedBatch = BatchBox?.SelectedItem as DeskFlow.Infrastructure.History.ArchiveBatch;
@@ -51,14 +63,45 @@ public partial class ArchiveHistoryWindow : Window
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => Reload();
 
+    /// <summary>按钮文案实时反映勾选了多少条。</summary>
+    private void UpdateUndoButton()
+    {
+        var checkedCount = _rows.Count(static r => r.IsChecked);
+        UndoButton.Content = checkedCount > 0 ? $"撤销选中（{checkedCount}）" : "撤销选中";
+        UndoButton.IsEnabled = checkedCount > 0 || RecordList.SelectedItems.Count > 0;
+
+        if (SelectAllButton is not null)
+        {
+            SelectAllButton.Content = _rows.Count > 0 && _rows.All(static r => r.IsChecked) ? "取消全选" : "全选";
+        }
+    }
+
+    /// <summary>全选 / 取消全选：按钮文案跟着状态走。</summary>
+    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        var select = _rows.Count > 0 && !_rows.All(static r => r.IsChecked);
+        foreach (var row in _rows)
+        {
+            row.IsChecked = select;
+        }
+
+        SelectAllButton.Content = select ? "取消全选" : "全选";
+        UpdateUndoButton();
+    }
+
     private void Search_Changed(object sender, TextChangedEventArgs e) => Reload();
 
     private async void Undo_Click(object sender, RoutedEventArgs e)
     {
-        var selected = RecordList.SelectedItems.Cast<Row>().ToList();
+        var selected = _rows.Where(static r => r.IsChecked).ToList();
         if (selected.Count == 0)
         {
-            StatusText.Text = "先在列表里选一条记录";
+            selected = RecordList.SelectedItems.Cast<Row>().ToList();
+        }
+
+        if (selected.Count == 0)
+        {
+            StatusText.Text = "先勾选要撤销的记录（或按住 Ctrl 点选）";
             return;
         }
 
@@ -85,6 +128,7 @@ public partial class ArchiveHistoryWindow : Window
         }
 
         StatusText.Text = $"已撤销 {done}/{selected.Count} 个文件";
+        SelectAllButton.Content = "全选";
         Reload();
     }
 
@@ -176,6 +220,48 @@ public partial class ArchiveHistoryWindow : Window
         return item;
     }
 
-    /// <summary>列表行：只暴露界面需要的字段，原始 FileRecord 留着给撤销用。</summary>
-    public sealed record Row(FileRecord Record, string TimeText, string Name, string Category, string Source, string OriginalDirectory);
+    /// <summary>列表行：带勾选状态，原始 FileRecord 留着给撤销用。</summary>
+    public sealed class Row : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _isChecked;
+
+        public Row(FileRecord record, string timeText, string name, string category, string source, string originalDirectory)
+        {
+            Record = record;
+            TimeText = timeText;
+            Name = name;
+            Category = category;
+            Source = source;
+            OriginalDirectory = originalDirectory;
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+        public FileRecord Record { get; }
+
+        public string TimeText { get; }
+
+        public string Name { get; }
+
+        public string Category { get; }
+
+        public string Source { get; }
+
+        public string OriginalDirectory { get; }
+
+        public bool IsChecked
+        {
+            get => _isChecked;
+            set
+            {
+                if (_isChecked == value)
+                {
+                    return;
+                }
+
+                _isChecked = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsChecked)));
+            }
+        }
+    }
 }

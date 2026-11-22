@@ -27,6 +27,7 @@
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBox x:Name="SearchBox" Width="220" Margin="0,0,8,0"
                          ToolTip="按文件名或类别筛选" TextChanged="Search_Changed" />
+                <Button x:Name="SelectAllButton" Content="全选" Click="SelectAll_Click" Margin="0,0,8,0" />
                 <Button Content="刷新" Click="Refresh_Click" Margin="0" />
             </StackPanel>
         </DockPanel>
@@ -53,6 +54,17 @@
                 </ListView.ItemContainerStyle>
                 <ListView.View>
                     <GridView>
+                        <GridViewColumn Width="50">
+                            <GridViewColumn.Header>
+                                <TextBlock Text="" />
+                            </GridViewColumn.Header>
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
                         <GridViewColumn Header="归档时间" Width="130" DisplayMemberBinding="{Binding TimeText}" />
                         <GridViewColumn Header="文件" Width="300" DisplayMemberBinding="{Binding Name}" />
                         <GridViewColumn Header="类别" Width="90" DisplayMemberBinding="{Binding Category}" />
@@ -68,7 +80,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="打开" Click="Open_Click" Margin="0,0,8,0" />
                 <Button Content="在资源管理器中显示" Click="Reveal_Click" Margin="0,0,8,0" />
-                <Button Content="撤销归档" Click="Undo_Click" Style="{StaticResource PrimaryButton}" />
+                <Button x:Name="UndoButton" Content="撤销选中" Click="Undo_Click" Style="{StaticResource PrimaryButton}" />
             </StackPanel>
         </DockPanel>
     </Grid>
