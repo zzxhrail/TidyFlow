@@ -925,3 +925,19 @@ System.InvalidOperationException: Transform is not valid for Window.
 | 双击图标 | 收起条上双击应用图标 = 直接启动该应用 |
 
 坐标一律换算成 DIP 再判断，150% 缩放下也不会错位。
+
+
+## 0.9.19：贴边隐匿的两个问题已修
+
+| 问题 | 原因 | 修法 |
+| --- | --- | --- |
+| 弹出一次后再也不隐藏 | 唤出时把 `_sliverMode` 置 false，之后没有任何地方重新计时 | `MouseLeave` → `RearmSliver()` 重新起 650ms 计时 |
+| 进出很生硬 | 直接改 `Left/Top`，一帧跳过去 | `AnimateWindowTo()`：16ms 一帧、EaseOutCubic 补间，160–180ms 滑入滑出 |
+
+实测日志（一轮完整循环）：
+
+```
+sliver parked:   left=1696.7   ← 隐到屏幕外
+sliver revealed: left=746.7    ← 光标靠近唤出
+sliver parked:   left=1696.7   ← 鼠标离开后再次隐藏
+```

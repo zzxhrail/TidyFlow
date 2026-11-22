@@ -92,6 +92,7 @@ public partial class DesktopPanelWindow : Window
         PreviewKeyDown += OnPanelKeyDown;
         PreviewMouseLeftButtonDown += OnWindowPreviewMouseDown;
         MouseEnter += (_, _) => ExitSliver();
+        MouseLeave += (_, _) => RearmSliver();
 
         // 拖放：用 handledEventsToo 挂到窗口上。
         // 之前挂在 XAML 属性上，拖到 ListBox / ScrollViewer 这些"自己会处理拖放"的子控件上时
@@ -504,6 +505,46 @@ public partial class DesktopPanelWindow : Window
         }
     }
 
+    /// <summary>把窗口从当前位置平滑移到目标位置（16ms 一帧，EaseOut），窗口 Left/Top 没法用 WPF 动画，只能手动补间。</summary>
+    private void AnimateWindowTo(double targetLeft, double targetTop, int milliseconds)
+    {
+        var startLeft = Left;
+        var startTop = Top;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        _suppressSnap = true;
+
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        timer.Tick += (_, _) =>
+        {
+            var t = Math.Min(1, sw.Elapsed.TotalMilliseconds / milliseconds);
+            var eased = 1 - Math.Pow(1 - t, 3);   // EaseOutCubic
+            Left = startLeft + ((targetLeft - startLeft) * eased);
+            Top = startTop + ((targetTop - startTop) * eased);
+
+            if (t >= 1)
+            {
+                timer.Stop();
+                Left = targetLeft;
+                Top = targetTop;
+                _suppressSnap = false;
+            }
+        };
+
+        timer.Start();
+    }
+
+    /// <summary>鼠标离开后重新开始 650ms 计时，让它能再次隐去。</summary>
+    private void RearmSliver()
+    {
+        if (!_collapsed || _dockEdge == DockEdge.None)
+        {
+            return;
+        }
+
+        _sliverTimer.Stop();
+        _sliverTimer.Start();
+    }
+
     private void SliverTick(object? sender, EventArgs e)
     {
         _sliverTimer.Stop();
@@ -517,6 +558,7 @@ public partial class DesktopPanelWindow : Window
     }
 
     /// <summary>贴边收起且没鼠标时：窗口移出屏幕，只留 4 DIP 在边上（不改变大小，恢复更可靠）。</summary>
+    /// <summary>贴边收起且鼠标离开：平滑滑出屏幕，只留 10 DIP。</summary>
     private void EnterSliver()
     {
         if (_sliverMode || _dockEdge == DockEdge.None)
@@ -531,35 +573,33 @@ public partial class DesktopPanelWindow : Window
         var area = GetWorkAreaDips();
         const double visible = 10;
 
-        _suppressSnap = true;
-        try
+        var targetLeft = Left;
+        var targetTop = Top;
+
+        switch (_dockEdge)
         {
-            switch (_dockEdge)
-            {
-                case DockEdge.Right:
-                    Left = area.Right - visible;
-                    break;
-                case DockEdge.Left:
-                    Left = area.Left - Width + visible;
-                    break;
-                case DockEdge.Top:
-                    Top = area.Top - Height + visible;
-                    break;
-                case DockEdge.Bottom:
-                    Top = area.Bottom - visible;
-                    break;
-            }
-        }
-        finally
-        {
-            _suppressSnap = false;
+            case DockEdge.Right:
+                targetLeft = area.Right - visible;
+                break;
+            case DockEdge.Left:
+                targetLeft = area.Left - Width + visible;
+                break;
+            case DockEdge.Top:
+                targetTop = area.Top - Height + visible;
+                break;
+            case DockEdge.Bottom:
+                targetTop = area.Bottom - visible;
+                break;
         }
 
-        Services.Diagnostics.Log($"sliver parked: edge={_dockEdge} left={Left:F1} top={Top:F1}");
+        AnimateWindowTo(targetLeft, targetTop, 180);
+        Services.Diagnostics.Log($"sliver parked: edge={_dockEdge} left={targetLeft:F1} top={targetTop:F1}");
     }
 
 
+
     /// <summary>鼠标靠近：把窗口移回屏幕内。</summary>
+    /// <summary>鼠标靠近：平滑滑回屏幕内。</summary>
     private void ExitSliver()
     {
         if (!_sliverMode)
@@ -570,33 +610,30 @@ public partial class DesktopPanelWindow : Window
         _sliverMode = false;
         var area = GetWorkAreaDips();
 
-        _suppressSnap = true;
-        try
+        var targetLeft = Left;
+        var targetTop = Top;
+
+        switch (_dockEdge)
         {
-            switch (_dockEdge)
-            {
-                case DockEdge.Right:
-                    Left = area.Right - Width;
-                    Top = Math.Max(area.Top, Math.Min(Top, area.Bottom - Height));
-                    break;
-                case DockEdge.Left:
-                    Left = area.Left;
-                    break;
-                case DockEdge.Top:
-                    Top = area.Top;
-                    break;
-                case DockEdge.Bottom:
-                    Top = area.Bottom - Height;
-                    break;
-            }
-        }
-        finally
-        {
-            _suppressSnap = false;
+            case DockEdge.Right:
+                targetLeft = area.Right - Width;
+                targetTop = Math.Max(area.Top, Math.Min(Top, area.Bottom - Height));
+                break;
+            case DockEdge.Left:
+                targetLeft = area.Left;
+                break;
+            case DockEdge.Top:
+                targetTop = area.Top;
+                break;
+            case DockEdge.Bottom:
+                targetTop = area.Bottom - Height;
+                break;
         }
 
-        Services.Diagnostics.Log($"sliver revealed: edge={_dockEdge} left={Left:F1} top={Top:F1}");
+        AnimateWindowTo(targetLeft, targetTop, 160);
+        Services.Diagnostics.Log($"sliver revealed: edge={_dockEdge} left={targetLeft:F1} top={targetTop:F1}");
     }
+
 
 
 
