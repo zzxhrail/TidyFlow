@@ -464,6 +464,7 @@
 
     <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="12" />
+        <Setter Property="Opacity" Value="0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Template">
             <Setter.Value>

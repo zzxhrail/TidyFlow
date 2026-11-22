@@ -791,3 +791,15 @@ System.InvalidOperationException: Transform is not valid for Window.
 | 拖动 | 再加亮，明确"正在拖" |
 
 原来它是 6px 宽 + 2px 圆角的"方条"，看着像 Windows 98；现在是 Win11 那种细胶囊，且滚动条留了 12px 的布局宽度，悬停加粗不会让内容左右抖动。
+
+
+## 滚动条自动隐藏（0.9.11）
+
+| 状态 | 表现 |
+| --- | --- |
+| 平时 | 完全隐藏（连位置都空着，不占视觉） |
+| 鼠标移入滚动区域 | 淡入（120ms） |
+| 滚轮 / 滚动内容 | 淡入，停手后 500ms 淡出 |
+| 悬停或拖动滚动条 | 保持显示，并加粗到 6px |
+
+实现是给所有 `ScrollViewer` 挂了一个附加属性 `ScrollBarAutoHide.Enabled`（在 App.xaml 里全局设置），运行时找到模板里的 `PART_VerticalScrollBar` 做透明度动画——不改 ScrollViewer 模板，也不影响滚动行为。
