@@ -45,6 +45,21 @@
                 </Grid>
             </Button>
         </DataTemplate>
+        <!-- 收起状态的横向应用条：小图标，可横向滚动，双击启动 -->
+        <DataTemplate x:Key="CollapsedTileTemplate">
+            <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseDoubleClick="Tile_DoubleClick"
+                    MouseRightButtonUp="Tile_RightClick" Tag="{Binding}" Width="56" Margin="2,0,2,0"
+                    Padding="4,2,4,2" AutomationProperties.Name="{Binding Title}"
+                    ToolTip="{Binding ToolTip}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Image Source="{Binding Icon}" Width="26" Height="26" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Title}" FontSize="9.5" Margin="0,2,0,0" Width="48"
+                               TextAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
     </Window.Resources>
 
     <Border x:Name="Root" CornerRadius="8" Background="{StaticResource PanelTint}"
@@ -54,6 +69,33 @@
              拖拽缩放和滚动都会明显掉帧（这是"整体卡顿"的主因）。窗口阴影交给 DWM。 -->
 
         <Grid>
+            <!-- 收起状态：一条窄横条，横向排应用图标，双击图标启动、双击空白展开 -->
+            <Border x:Name="CollapsedBar" Visibility="Collapsed" Height="72" Margin="16,10,16,10"
+                    VerticalAlignment="Top" Background="Transparent"
+                    PreviewMouseLeftButtonDown="CollapsedBar_MouseDown">
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="Assets/icon-32.png" Width="26" Height="26"
+                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="CollapsedTopmostButton" Style="{StaticResource IconButton}"
+                                Content="&#xE840;" ToolTip="置顶（总在最前）" Click="CollapsedTopmost_Click" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE922;" ToolTip="展开"
+                                Click="ToggleCollapse_Click" />
+                    </StackPanel>
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                                  PanningMode="HorizontalOnly" VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding CollapsedTiles}" ItemTemplate="{StaticResource CollapsedTileTemplate}"
+                                      PreviewMouseLeftButtonDown="CollapsedBar_MouseDown">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
             <!-- 确认提示：操作完成后弹出一下（缩放 + 淡入），1.2 秒后自动消失 -->
             <Border x:Name="ConfirmCard" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                     Margin="0,0,0,96" Padding="14,9" CornerRadius="6" Background="#F02C2C2C"

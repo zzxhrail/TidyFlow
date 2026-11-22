@@ -57,6 +57,9 @@ public sealed class PanelViewModel : ObservableObject
 
     public ObservableCollection<PanelTile> Categories { get; } = new();
 
+    /// <summary>收起条里横向排列的图标（固定位置 + 用户快捷方式）。</summary>
+    public ObservableCollection<PanelTile> CollapsedTiles { get; } = new();
+
     /// <summary>固定位置（归档目录）：不跟用户快捷方式混在一起，永远在「应用与快捷方式」顶部。</summary>
     public ObservableCollection<PanelTile> SystemPlaces { get; } = new();
 
@@ -1538,6 +1541,16 @@ public sealed class PanelViewModel : ObservableObject
             "添加",
             "快捷方式",
             ShellIconProvider.ForFolder(Environment.GetFolderPath(Environment.SpecialFolder.Windows))));
+        RebuildCollapsedTiles();
+    }
+
+    private void RebuildCollapsedTiles()
+    {
+        CollapsedTiles.Clear();
+        foreach (var tile in SystemPlaces.Concat(Shortcuts))
+        {
+            CollapsedTiles.Add(tile);
+        }
     }
 
     private void BuildRecent()

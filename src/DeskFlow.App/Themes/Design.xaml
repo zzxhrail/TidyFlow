@@ -434,6 +434,7 @@
         </Setter>
     </Style>
 
+
     <!-- ============ 滚动条（Win11 极细） ============ -->
     <!-- ============ 滚动条（Win11：4px 胶囊，悬停变 6px 加深） ============ -->
     <Style x:Key="FluentScrollThumb" TargetType="Thumb">
@@ -760,11 +761,14 @@
         </Setter>
     </Style>
 
+    <!-- 菜单分隔线：一条较长的细线，左右留白相等（居中） -->
     <Style TargetType="Separator">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Separator">
-                    <Border Height="1" Background="#1AFFFFFF" Margin="8,4" />
+                    <Border Height="1" Background="#33FFFFFF" Margin="12,6,12,6"
+                            HorizontalAlignment="Stretch" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -319,7 +319,6 @@ public partial class App : Application
 
             Panel.StartWatching();
             Panel.ImportRecent(TimeSpan.FromMinutes(30));
-            Panel.StartGlobalWatch();
         }
         catch (Exception ex)
         {
@@ -379,7 +378,6 @@ public partial class App : Application
     private static void RestartApplication()
     {
         Settings.Save();
-        Panel.StopGlobalWatch();
         Panel.StopWatching();
         AllowPanelClose();
 
@@ -407,7 +405,6 @@ public partial class App : Application
     private static void ExitApplication()
     {
         Settings.Save();
-        Panel.StopGlobalWatch();
         Panel.StopWatching();
         AllowPanelClose();
         Current.Shutdown(0);
@@ -424,7 +421,6 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        Panel?.StopGlobalWatch();
         Panel?.StopWatching();
         Tray?.Dispose();
         Settings?.Save();

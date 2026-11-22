@@ -24,7 +24,6 @@ public partial class SettingsWindow : Window
     }
 
     /// <summary>全局监听的文件类型（界面上的小标签列表）。</summary>
-    private readonly System.Collections.ObjectModel.ObservableCollection<string> _extensions = new();
 
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
@@ -47,40 +46,8 @@ public partial class SettingsWindow : Window
         RefreshWatchList();
         RefreshCategories();
         RefreshShortcuts();
-        LoadGlobalWatch();
-        LoadGlobalWatch();
     }
 
-    private void LoadGlobalWatch()
-    {
-        GlobalWatchCheck.IsChecked = _settings.GlobalWatchEnabled;
-
-        _extensions.Clear();
-        var source = _settings.GlobalExtensions.Count > 0
-            ? _settings.GlobalExtensions
-            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions.ToList();
-
-        foreach (var extension in NormalizeExtensions(source))
-        {
-            _extensions.Add(extension);
-        }
-
-        ExtChipsControl.ItemsSource = _extensions;
-        UpdateExtCount();
-
-        // 「添加类型」下拉：直接取分类规则里的全部后缀，用户不用记着该写 .pptx 还是 pptx
-        KnownExtBox.ItemsSource = App.Categories.All
-            .SelectMany(static category => category.Extensions.Select(extension => new KnownExtension(extension, category.Name)))
-            .GroupBy(static item => item.Extension, StringComparer.OrdinalIgnoreCase)
-            .Select(static group => group.First())
-            .OrderBy(static item => item.Extension, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var roots = _settings.GlobalRoots.Count > 0
-            ? _settings.GlobalRoots
-            : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots;
-        GlobalRootsList.ItemsSource = new List<string>(roots);
-    }
 
     private static IEnumerable<string> NormalizeExtensions(IEnumerable<string> raw) =>
         raw.Select(static e => (e ?? string.Empty).Trim().ToLowerInvariant())
@@ -88,151 +55,19 @@ public partial class SettingsWindow : Window
             .Where(static e => e.Length > 1)
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
-    private void UpdateExtCount() => ExtCountText.Text = $"共 {_extensions.Count} 种";
 
-    private void AddExt_Click(object sender, RoutedEventArgs e)
-    {
-        var raw = NewExtBox.Text ?? string.Empty;
-        var added = AddExtensions(NormalizeExtensions(raw.Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)));
-        NewExtBox.Text = string.Empty;
-
-        if (added == 0 && raw.Trim().Length > 0)
-        {
-            StatusTextPanel("这个类型已经在列表里了");
-        }
-    }
 
     /// <summary>把若干后缀加进列表，返回实际新增数量（已存在的跳过）。</summary>
-    private int AddExtensions(IEnumerable<string> extensions)
-    {
-        var added = 0;
-        foreach (var extension in extensions)
-        {
-            if (_extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
 
-            _extensions.Add(extension);
-            added++;
-        }
-
-        UpdateExtCount();
-        return added;
-    }
-
-    /// <summary>下拉里选中某个后缀 → 直接加入列表并清空选择，避免误以为"选中就完事了"。</summary>
-    private void KnownExtBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (KnownExtBox.SelectedItem is not KnownExtension known)
-        {
-            return;
-        }
-
-        var added = AddExtensions([known.Extension]);
-        if (added == 0)
-        {
-            StatusTextPanel(known.Extension + " 已经在列表里了");
-        }
-
-        // 保留选中项：下拉框里能看到"刚选的是什么"，再次选择同一项不会重复添加
-    }
 
     /// <summary>「按分类添加」：弹一个分类菜单，点哪个就把该分类下所有后缀加进来。</summary>
-    private void AddExtensionsByCategory_Click(object sender, RoutedEventArgs e)
-    {
-        var menu = new System.Windows.Controls.ContextMenu();
 
-        foreach (var category in App.Categories.All)
-        {
-            if (category.Extensions.Count == 0)
-            {
-                continue;
-            }
 
-            var item = new System.Windows.Controls.MenuItem
-            {
-                Header = $"{category.Name}（{category.Extensions.Count} 种）",
-            };
 
-            var extensions = category.Extensions.ToList();
-            item.Click += (_, _) =>
-            {
-                var added = AddExtensions(extensions);
-                StatusTextPanel(added == 0 ? $"{category.Name} 的后缀都已在列表里" : $"已加入 {category.Name} 的 {added} 种后缀");
-            };
 
-            menu.Items.Add(item);
-        }
 
-        if (menu.Items.Count == 0)
-        {
-            StatusTextPanel("分类规则里还没有可用的后缀");
-            return;
-        }
 
-        menu.PlacementTarget = sender as System.Windows.UIElement;
-        menu.IsOpen = true;
-    }
 
-    private void RemoveExt_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string extension })
-        {
-            return;
-        }
-
-        _extensions.Remove(extension);
-        UpdateExtCount();
-    }
-
-    private void ResetExt_Click(object sender, RoutedEventArgs e)
-    {
-        _extensions.Clear();
-        foreach (var extension in NormalizeExtensions(DeskFlow.Infrastructure.Watch.GlobalWatchFilter.DefaultExtensions))
-        {
-            _extensions.Add(extension);
-        }
-
-        UpdateExtCount();
-    }
-
-    /// <summary>类型列表下方没有独立提示区，借用状态栏把话说了。</summary>
-    private void StatusTextPanel(string message) => ExtCountText.Text = message;
-
-    private List<string> CurrentGlobalRoots() =>
-        GlobalRootsList.Items.Cast<string>().Where(static r => !string.IsNullOrWhiteSpace(r)).ToList();
-
-    private void AddGlobalRoot_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog { Title = "选择要监听的目录或盘符" };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        var roots = CurrentGlobalRoots();
-        if (!roots.Contains(dialog.FolderName, StringComparer.OrdinalIgnoreCase))
-        {
-            roots.Add(dialog.FolderName);
-            GlobalRootsList.ItemsSource = roots;
-        }
-    }
-
-    private void RemoveGlobalRoot_Click(object sender, RoutedEventArgs e)
-    {
-        if (GlobalRootsList.SelectedItem is not string selected)
-        {
-            return;
-        }
-
-        var roots = CurrentGlobalRoots();
-        roots.RemoveAll(r => string.Equals(r, selected, StringComparison.OrdinalIgnoreCase));
-        GlobalRootsList.ItemsSource = roots;
-    }
-
-    private void ResetGlobalRoots_Click(object sender, RoutedEventArgs e) =>
-        GlobalRootsList.ItemsSource = new List<string>(DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots);
 
     private async void RefreshWatchList()
     {
@@ -452,13 +287,9 @@ public partial class SettingsWindow : Window
         _settings.AnimationsEnabled = AnimationsCheck.IsChecked == true;
         Services.Animations.Enabled = _settings.AnimationsEnabled;
 
-        _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
-        _settings.GlobalRoots = CurrentGlobalRoots();
-        _settings.GlobalExtensions = _extensions.ToList();
         _settings.Save();
 
         // 全局监听配置变了就立即按新配置重开，不用重启程序
-        _viewModel.RestartGlobalWatch();
 
         base.OnClosed(e);
     }

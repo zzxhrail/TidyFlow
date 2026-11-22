@@ -87,6 +87,7 @@ public partial class DesktopPanelWindow : Window
 
         // 空格快速预览（类似 macOS Quick Look）：鼠标悬停哪个文件，就预览哪个
         PreviewKeyDown += OnPanelKeyDown;
+        PreviewMouseLeftButtonDown += OnWindowPreviewMouseDown;
 
         // 拖放：用 handledEventsToo 挂到窗口上。
         // 之前挂在 XAML 属性上，拖到 ListBox / ScrollViewer 这些"自己会处理拖放"的子控件上时
@@ -347,31 +348,113 @@ public partial class DesktopPanelWindow : Window
         return new IntPtr(hit);
     }
 
-    private const double CollapsedHeight = 92;   // 要留够标题栏高度（含 16px 内边距），否则标题会被裁掉
+    private const double CollapsedHeight = 92;   // 收起条 72 + 上下边距
 
-    private void ToggleCollapse_Click(object sender, RoutedEventArgs e)
+    private bool _topmostBeforeCollapse;
+
+    private void ToggleCollapse_Click(object sender, RoutedEventArgs e) => SetCollapsed(!_collapsed);
+
+    /// <summary>收起状态下的双击：点到图标就启动应用，点到空白就展开。</summary>
+    private void OnWindowPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        _collapsed = !_collapsed;
+        if (!_collapsed || e.ClickCount < 2)
+        {
+            return;
+        }
 
-        if (_collapsed)
+        for (var node = e.OriginalSource as DependencyObject; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is Button)
+            {
+                return;   // 交给图标：双击启动
+            }
+        }
+
+        Services.Diagnostics.Log("collapsed dblclick → expand");
+        e.Handled = true;
+        SetCollapsed(false);
+    }
+
+    private void CollapsedBar_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is DependencyObject source)
+        {
+            for (var node = e.OriginalSource as DependencyObject; node is not null; node = VisualTreeHelper.GetParent(node))
+            {
+                if (node is Button)
+                {
+                    return;
+                }
+
+                if (ReferenceEquals(node, source))
+                {
+                    break;
+                }
+            }
+        }
+
+        Services.Diagnostics.Log("collapsed bar double-click → expand");
+        e.Handled = true;
+        SetCollapsed(false);
+    }
+
+    private void CollapsedBar_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // 收起条上双击空白处 = 展开
+        if (e.ClickCount >= 2)
+        {
+            e.Handled = true;
+            SetCollapsed(false);
+        }
+    }
+
+    private void CollapsedTopmost_Click(object sender, RoutedEventArgs e)
+    {
+        Topmost = !Topmost;
+        UpdateTopmostVisual();
+    }
+
+    private void UpdateTopmostVisual()
+    {
+        if (CollapsedTopmostButton is null)
+        {
+            return;
+        }
+
+        CollapsedTopmostButton.Content = Topmost ? "\uE840" : "\uE718";
+        CollapsedTopmostButton.ToolTip = Topmost ? "已置顶（点一下取消）" : "置顶（总在最前）";
+    }
+
+    private void SetCollapsed(bool collapsed)
+    {
+        _collapsed = collapsed;
+
+        if (collapsed)
         {
             _expandedHeight = Height;
+            _topmostBeforeCollapse = Topmost;
 
-            // 只收起标题栏以下的分区；窗口高度也要放开 MinHeight，否则会被抬回 380 变成空白卡片
             MinHeight = CollapsedHeight;
-            SetBodyRowsVisible(false);
+            BodyScroller.Visibility = Visibility.Collapsed;
+            CollapsedBar.Visibility = Visibility.Visible;
             Height = CollapsedHeight;
-            CollapseButton.Content = "\uE922";
+
+            // 收起后置顶，随时能点到（用户也可以再点按钮取消）
+            Topmost = true;
+            UpdateTopmostVisual();
         }
         else
         {
             Height = Math.Clamp(_expandedHeight, 380, _maxPanelHeight);
             MinHeight = 380;
-            SetBodyRowsVisible(true);
-            CollapseButton.Content = "\uE921";
+            BodyScroller.Visibility = Visibility.Visible;
+            CollapsedBar.Visibility = Visibility.Collapsed;
+
+            Topmost = _topmostBeforeCollapse;
         }
 
-        // 尺寸突变后让布局/渲染重跑一遍（不用 Hide/Show，避免打断渲染面）
+        CollapseButton.Content = collapsed ? "\uE922" : "\uE921";
+
         Dispatcher.BeginInvoke(new Action(() =>
         {
             Root.InvalidateMeasure();
@@ -1393,10 +1476,13 @@ public partial class DesktopPanelWindow : Window
             FontWeight = System.Windows.FontWeights.SemiBold,
         });
         menu.Items.Add(new Separator());
-        menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
+
+        // 顺序：设置 → 归档记录 →（细线）→ 扫描磁盘
         menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
+        menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemFor("扫描磁盘…", OpenScanInteractive));
+
         menu.PlacementTarget = sender as UIElement;
         menu.IsOpen = true;
     }

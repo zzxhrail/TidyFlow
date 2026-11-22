@@ -55,6 +55,15 @@ public sealed class TrayIconService : IDisposable
         // 双击托盘图标 = 打开面板（用户最常见的操作）
         _notifyIcon.DoubleClick += (_, _) => OnUi(showPanel);
 
+        // 归档/收录类提示走 Windows 系统通知（气球），在通知中心留痕
+        ToastService.SystemNotifier = (title, detail) =>
+        {
+            _notifyIcon.BalloonTipTitle = title;
+            _notifyIcon.BalloonTipText = detail;
+            _notifyIcon.BalloonTipIcon = ToolTipIcon.Info;
+            _notifyIcon.ShowBalloonTip(4000);
+        };
+
         Diagnostics.Log("tray icon created");
     }
 
