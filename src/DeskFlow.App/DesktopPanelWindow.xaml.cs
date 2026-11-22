@@ -328,10 +328,11 @@ public partial class DesktopPanelWindow : Window
             return;
         }
 
+        Services.Diagnostics.Log($"tile click: kind={tile.Kind} title={tile.Title}");
         switch (tile.Kind)
         {
             case TileKind.Pending:
-                _ = _viewModel.AcceptPendingAsync(tile);
+                OpenPreview(tile);
                 break;
             case TileKind.Browse:
                 _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title);
@@ -352,6 +353,23 @@ public partial class DesktopPanelWindow : Window
                 }
 
                 break;
+        }
+    }
+
+    /// <summary>待接收文件：先看内容再决定归档，别直接吞进分类目录。</summary>
+    private void OpenPreview(PanelTile tile)
+    {
+        try
+        {
+            Services.Diagnostics.Log($"open preview: {tile.Title} path={tile.Path}");
+            var window = new Preview.PreviewWindow(_viewModel, tile) { Owner = this };
+            window.ShowDialog();
+            Services.Diagnostics.Log("preview closed");
+        }
+        catch (Exception ex)
+        {
+            Services.Diagnostics.Log("preview failed: " + ex);
+            MessageBox.Show(ex.Message, "预览打开失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -435,6 +453,7 @@ public partial class DesktopPanelWindow : Window
         var menu = new ContextMenu();
         if (tile.Kind == TileKind.Pending)
         {
+            menu.Items.Add(MenuItemFor("预览", () => OpenPreview(tile)));
             menu.Items.Add(MenuItemFor("立即归档", () => _ = _viewModel.AcceptPendingAsync(tile)));
             menu.Items.Add(MenuItemFor("忽略", () => _viewModel.IgnorePending(tile)));
         }

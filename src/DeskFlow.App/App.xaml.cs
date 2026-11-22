@@ -94,6 +94,27 @@ public partial class App : Application
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
 
+            // --preview <文件>：直接开预览窗口（也方便做"用 TidyFlow 预览"的右键菜单项）
+            var previewIndex = Array.FindIndex(e.Args, static x => x.Equals("--preview", StringComparison.OrdinalIgnoreCase));
+            if (previewIndex >= 0 && previewIndex + 1 < e.Args.Length)
+            {
+                var target = e.Args[previewIndex + 1];
+                var tile = new ViewModels.PanelTile
+                {
+                    Kind = ViewModels.TileKind.Pending,
+                    Title = Path.GetFileName(target),
+                    Path = target,
+                    RecordId = string.Empty,
+                    Icon = Services.ShellIconProvider.ForFile(target),
+                };
+
+                var preview = new Preview.PreviewWindow(Panel, tile);
+                MainWindow = preview;
+                preview.Closed += (_, _) => Shutdown(0);
+                preview.Show();
+                return;
+            }
+
             // --history：直接打开归档记录（可撤销）
             if (e.Args.Any(static x => x.Equals("--history", StringComparison.OrdinalIgnoreCase)))
             {

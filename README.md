@@ -347,3 +347,22 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 | 配置与索引 | 仍然是 %LOCALAPPDATA%\DeskFlow —— **故意没改**，否则老用户的设置和归档索引会丢 |
 
 图标源文件放在 src/DeskFlow.App/Assets/：tidyflow-source.img（原始图）、appicon-256.png、icon-*.png、tidyflow.ico。
+
+### 待接收文件可以先预览再决定
+
+![图片预览](docs/screenshot-preview-image.png)
+
+点面板「待接收」里的任意文件，弹的是**预览窗口**（不再是点了就直接吞进分类目录）：
+
+| 内容 | 预览方式 |
+| --- | --- |
+| 图片 png / jpg / gif / bmp / webp / ico / tif | 直接显示，底部标注像素尺寸 |
+| 文本 txt / md / log / json / xml / csv / 代码… | 等宽字体显示前 **200 KB** |
+| 其它（pdf / docx / zip …） | 显示文件信息 + 提示用默认程序打开 |
+
+窗口底部三个动作：**用默认程序打开** / **忽略** / **立即归档**（归档后自动关闭并刷新面板）。
+右键菜单里也有「预览」，和左键一致。
+
+![文本预览](docs/screenshot-preview-text.png)
+
+命令行也能直接预览：`TidyFlow.exe --preview <文件路径>`（方便做成「用 TidyFlow 预览」的右键菜单项）。
