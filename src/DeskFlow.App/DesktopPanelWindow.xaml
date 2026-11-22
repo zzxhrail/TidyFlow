@@ -83,7 +83,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel x:Name="Body" Visibility="{Binding IsHome, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel x:Name="Body">
 
                         <!-- 来源开关 -->
                         <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
@@ -118,80 +118,138 @@
                                           ItemsPanel="{StaticResource TilePanel}" />
                         </StackPanel>
 
-                        <!-- 快捷方式 -->
-                        <TextBlock Text="应用与快捷方式" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}"
-                                      ItemsPanel="{StaticResource TilePanel}" />
-
-                        <!-- 最近归档 -->
-                        <TextBlock Text="最近归档" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}"
-                                      ItemsPanel="{StaticResource TilePanel}" />
-                        <TextBlock Text="还没有归档记录，等文件进来或打开上面的开关" Style="{StaticResource Muted}"
-                                   Margin="2,4,0,0"
-                                   Visibility="{Binding HasRecent, Converter={StaticResource InverseBoolToVisibility}}" />
-
-                        <!-- 分类 -->
-                        <TextBlock Text="分类" Style="{StaticResource SectionHeader}" />
-                        <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource TileTemplate}"
-                                      ItemsPanel="{StaticResource TilePanel}" />
-                        <TextBlock Text="把文件拖到分类上即可收录；按住 Shift 拖 = 移动，直接拖 = 复制"
-                                   Style="{StaticResource Muted}" Margin="2,4,0,0" TextWrapping="Wrap" />
-
-                        <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
-                                Padding="14,12" Margin="0,16,0,0">
-                            <TextBlock Text="{Binding LogText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="12" TextWrapping="Wrap" />
-                        </Border>
-                    </StackPanel>
-
-                    <!-- 分类详情：面板内导航，不弹资源管理器 -->
-                    <StackPanel Visibility="{Binding IsBrowsing, Converter={StaticResource BoolToVisibility}}">
-                        <Grid Margin="0,14,0,10">
+                        <!-- 一级 / 二级导航：应用与快捷方式、最近归档在顶层，分类是「分类」下的二级 -->
+                        <Grid Margin="0,16,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Style="{StaticResource IconButton}" Content="&#xE72B;"
-                                    ToolTip="返回" Click="BrowseBack_Click" Margin="0,0,4,0" />
-                            <StackPanel Grid.Column="1" Margin="4,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding BrowseTitle}" Foreground="{StaticResource TextPrimaryBrush}"
-                                           FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding BrowseSubtitle}" Foreground="{StaticResource TextTertiaryBrush}"
-                                           FontSize="10.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE8B7;"
-                                    ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
-                        </Grid>
 
-                        <ItemsControl ItemsSource="{Binding BrowseItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#12FFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
-                                            CornerRadius="10" Padding="10,8" Margin="0,0,0,6"
-                                            MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
-                                            Tag="{Binding}" Cursor="Hand">
-                                        <Grid>
+                            <Border Grid.Column="0" CornerRadius="8" Background="#08FFFFFF"
+                                    BorderBrush="#10FFFFFF" BorderThickness="1" Padding="5,8" VerticalAlignment="Top">
+                                <ListBox x:Name="NavList" Width="128" Background="Transparent" BorderThickness="0"
+                                         ItemsSource="{Binding NavEntries}" SelectionChanged="Nav_SelectionChanged">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                            <Setter Property="Padding" Value="8,6" />
+                                            <Setter Property="Margin" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                                    <Setter Property="Focusable" Value="False" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="{Binding Margin}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets"
+                                                           FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
+                                                           FontSize="12.5" TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
+                                                                    <Setter Property="FontSize" Value="11" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+
+                            <ScrollViewer Grid.Column="1" Margin="12,0,0,0" VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <!-- 应用与快捷方式 -->
+                                    <StackPanel Visibility="{Binding IsShortcutsSection, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="应用与快捷方式" Style="{StaticResource H2}" Margin="2,0,0,10" />
+                                        <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}"
+                                                      ItemsPanel="{StaticResource TilePanel}" />
+                                    </StackPanel>
+
+                                    <!-- 最近归档 -->
+                                    <StackPanel Visibility="{Binding IsRecentSection, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="最近归档" Style="{StaticResource H2}" Margin="2,0,0,10" />
+                                        <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}"
+                                                      ItemsPanel="{StaticResource TilePanel}" />
+                                        <TextBlock Text="还没有归档记录，等文件进来或打开上面的开关" Style="{StaticResource Muted}"
+                                                   Margin="2,4,0,0"
+                                                   Visibility="{Binding HasRecent, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        <TextBlock Text="把文件拖到左侧分类上即可收录；按住 Shift 拖 = 移动，直接拖 = 复制"
+                                                   Style="{StaticResource Muted}" Margin="2,10,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <!-- 分类详情 -->
+                                    <StackPanel Visibility="{Binding IsCategorySection, Converter={StaticResource BoolToVisibility}}">
+                                        <Grid Margin="2,0,0,10">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Image Grid.Column="0" Source="{Binding Icon}" Width="22" Height="22" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}"
-                                                           FontSize="12.5" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding TimeText}" Foreground="{StaticResource TextTertiaryBrush}"
-                                                           FontSize="10" Margin="0,2,0,0" />
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding BrowseTitle}" Style="{StaticResource H2}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding BrowseSubtitle}" Style="{StaticResource Muted}"
+                                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5" Margin="8,0,0,0" />
+                                            <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8B7;"
+                                                    ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
                                         </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+
+                                        <ItemsControl ItemsSource="{Binding BrowseItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#0AFFFFFF" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
+                                                            MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
+                                                            Tag="{Binding}" Cursor="Hand">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#17FFFFFF" />
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Image Grid.Column="0" Source="{Binding Icon}" Width="20" Height="20" VerticalAlignment="Center" />
+                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Name}" FontSize="12.5" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
+                                                                       Style="{StaticResource Muted}" Margin="8,0,0,0" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <Border CornerRadius="8" Background="#0AFFFFFF" Padding="14,10" Margin="0,14,0,0">
+                            <TextBlock Text="{Binding LogText}" Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                        </Border>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

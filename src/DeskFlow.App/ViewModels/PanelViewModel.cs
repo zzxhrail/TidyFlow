@@ -157,7 +157,9 @@ public sealed class PanelViewModel : ObservableObject
 
         const double horizontalPadding = 44;   // 窗口内边距 + 边框 + 格子间距
         const double minTileWidth = 80;
-        var usable = Math.Max(160, panelWidth - horizontalPadding);
+        // 左侧导航固定占 128 + 12 间距 + 边距，图标区只能用剩下的宽度
+        const double navWidth = 128 + 12;
+        var usable = Math.Max(140, panelWidth - horizontalPadding - navWidth);
         var columns = Math.Clamp((int)Math.Floor(usable / minTileWidth), 2, 8);
         // 扣掉格子外边距（3×2）与按钮内边距（4×2），否则文字会被 ClipToBounds 切掉
         var tileWidth = Math.Max(64, Math.Floor(usable / columns) - 14);
@@ -201,6 +203,44 @@ public sealed class PanelViewModel : ObservableObject
         BuildCategories();
     }
 
+    /// <summary>左侧导航的一条（分组标题或可点击条目）。</summary>
+    public sealed record NavEntry(string Title, string Glyph, string Kind, string Key, bool IsHeader = false, double Indent = 0)
+    {
+        /// <summary>二级条目缩进（Thickness 不能直接绑定 double）。</summary>
+        public Thickness Margin => new(Indent, 0, 0, 0);
+
+        public override string ToString() => Title;
+    }
+
+    private string _section = "shortcuts";
+
+    /// <summary>当前显示的分区：shortcuts / recent / category。</summary>
+    public string Section
+    {
+        get => _section;
+        private set
+        {
+            if (SetProperty(ref _section, value))
+            {
+                OnPropertyChanged(nameof(IsShortcutsSection));
+                OnPropertyChanged(nameof(IsRecentSection));
+                OnPropertyChanged(nameof(IsCategorySection));
+            }
+        }
+    }
+
+    public bool IsShortcutsSection => _section == "shortcuts";
+
+    public bool IsRecentSection => _section == "recent";
+
+    public bool IsCategorySection => _section == "category";
+
+    public List<NavEntry> NavEntries { get; } = new();
+
+    public void SelectShortcuts() => Section = "shortcuts";
+
+    public void SelectRecent() => Section = "recent";
+
     private bool _isBrowsing;
     private string _browseTitle = string.Empty;
     private string _browseSubtitle = string.Empty;
@@ -240,6 +280,13 @@ public sealed class PanelViewModel : ObservableObject
     /// <summary>点分类文件夹：面板内切换到文件列表页。</summary>
     public void OpenCategory(string directory, string title)
     {
+        // 没给路径（或给了个空串）时退回 <归档根>/<分类名>
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Path.Combine(_settings.ArchiveRoot, title);
+        }
+
+        Section = "category";
         _browsePath = directory;
         BrowseTitle = title;
         BrowseItems.Clear();
@@ -479,6 +526,22 @@ public sealed class PanelViewModel : ObservableObject
         {
             Log($"补捞到 {imported} 个新文件");
         }
+    }
+
+    /// <summary>重建左侧导航：一级为「应用与快捷方式 / 最近归档」，分类作为二级。</summary>
+    public void RebuildNav()
+    {
+        NavEntries.Clear();
+        NavEntries.Add(new NavEntry("应用与快捷方式", "\uE71D", "section", "shortcuts"));
+        NavEntries.Add(new NavEntry("最近归档", "\uE81C", "section", "recent"));
+        NavEntries.Add(new NavEntry("分类", string.Empty, "header", string.Empty, IsHeader: true));
+
+        foreach (var category in Categories)
+        {
+            NavEntries.Add(new NavEntry(category.Title, string.Empty, "category", category.Path ?? string.Empty, Indent: 14));
+        }
+
+        OnPropertyChanged(nameof(NavEntries));
     }
 
     public void RefreshAll()
@@ -1201,6 +1264,8 @@ public sealed class PanelViewModel : ObservableObject
                 ShellIconProvider.ForFolder(directory),
                 directory));
         }
+
+        RebuildNav();
     }
 
 

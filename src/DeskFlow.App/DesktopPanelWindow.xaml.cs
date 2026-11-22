@@ -365,6 +365,28 @@ public partial class DesktopPanelWindow : Window
 
     private void BrowseBack_Click(object sender, RoutedEventArgs e) => _viewModel.CloseBrowse();
 
+    /// <summary>左侧导航：点一级切分区，点二级（分类）进该分类的文件列表。</summary>
+    private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (NavList.SelectedItem is not PanelViewModel.NavEntry entry)
+        {
+            return;
+        }
+
+        switch (entry.Kind)
+        {
+            case "section" when entry.Key == "shortcuts":
+                _viewModel.SelectShortcuts();
+                break;
+            case "section" when entry.Key == "recent":
+                _viewModel.SelectRecent();
+                break;
+            case "category":
+                _viewModel.OpenCategory(entry.Key, entry.Title);
+                break;
+        }
+    }
+
     private void BrowseOpenFolder_Click(object sender, RoutedEventArgs e) =>
         ShellLauncher.RevealInExplorer(_viewModel.BrowsePath);
 
