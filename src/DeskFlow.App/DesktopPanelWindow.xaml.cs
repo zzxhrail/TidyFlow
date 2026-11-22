@@ -416,6 +416,16 @@ public partial class DesktopPanelWindow : Window
             }
 
             menu.Items.Add(MenuItemFor("在资源管理器中显示", () => ShellLauncher.RevealInExplorer(tile.Path)));
+
+            // 归档过的文件：可以撤销（放回原位置）或删除（进回收站）
+            if (tile.Kind == TileKind.File && !string.IsNullOrWhiteSpace(tile.RecordId))
+            {
+                var recordId = tile.RecordId;
+                menu.Items.Add(new Separator());
+                menu.Items.Add(MenuItemFor("撤销回原位置", () => _ = UndoFromPanelAsync(recordId, tile.Title)));
+                menu.Items.Add(MenuItemFor("删除（回收站）", () => DeleteFromPanel(recordId, tile.Title)));
+            }
+
             if (tile.Path is not null && _settings.Shortcuts.Any(s => string.Equals(s.Path, tile.Path, StringComparison.OrdinalIgnoreCase)))
             {
                 menu.Items.Add(MenuItemFor("从面板移除", () => _viewModel.RemoveShortcut(tile.Path)));
@@ -425,6 +435,32 @@ public partial class DesktopPanelWindow : Window
         menu.PlacementTarget = sender as UIElement;
         menu.IsOpen = true;
         e.Handled = true;
+    }
+
+    private async Task UndoFromPanelAsync(string recordId, string fileName)
+    {
+        var confirm = MessageBox.Show(
+            $"把「{fileName}」放回原来的位置？\n\n文件会从归档目录移走。",
+            "撤销归档", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK);
+
+        if (confirm != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        await _viewModel.UndoByIdAsync(recordId);
+    }
+
+    private void DeleteFromPanel(string recordId, string fileName)
+    {
+        var confirm = MessageBox.Show(
+            $"删除「{fileName}」？\n\n会移到回收站，误删还能捞回来；原位置不会恢复。",
+            "删除归档文件", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel);
+
+        if (confirm == MessageBoxResult.OK)
+        {
+            _viewModel.DeleteById(recordId);
+        }
     }
 
     private static MenuItem MenuItemFor(string header, Action action)

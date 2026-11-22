@@ -868,6 +868,50 @@ public sealed class PanelViewModel : ObservableObject
         return done;
     }
 
+    /// <summary>按记录 id 撤销（面板右键用）。</summary>
+    public async Task<bool> UndoByIdAsync(string recordId)
+    {
+        var record = _index.All.FirstOrDefault(r => r.Id == recordId);
+        return record is not null && await UndoAsync(record);
+    }
+
+    /// <summary>删除归档文件（进回收站），记录标记为已删除。</summary>
+    public bool DeleteById(string recordId)
+    {
+        var record = _index.All.FirstOrDefault(r => r.Id == recordId);
+        if (record is null)
+        {
+            return false;
+        }
+
+        var path = record.ArchivedPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            record.Status = ArchiveStatus.Deleted;
+            _index.Upsert(record);
+            BuildRecent();
+            BuildCategories();
+            return false;
+        }
+
+        var ok = DeskFlow.Infrastructure.Services.RecycleBin.TryDelete(path);
+        if (!ok)
+        {
+            Log($"删除失败 {record.FileName}");
+            ToastService.Show("删除失败", record.FileName, path);
+            return false;
+        }
+
+        record.Status = ArchiveStatus.Deleted;
+        record.ArchivedPath = null;
+        _index.Upsert(record);
+        Log($"已删除归档文件 {record.FileName}（回收站）");
+        ToastService.Show("已删除", $"{record.FileName} 已移到回收站", record.SourcePath);
+        BuildRecent();
+        BuildCategories();
+        return true;
+    }
+
     /// <summary>可撤销的归档记录（归档文件还在的），按时间倒序。</summary>
     public IReadOnlyList<FileRecord> GetUndoableRecords(string? keyword = null)
     {
@@ -1032,7 +1076,8 @@ public sealed class PanelViewModel : ObservableObject
                 record.FileName,
                 $"{record.Category} · {record.Source.DisplayName()}",
                 ShellIconProvider.ForFile(record.ArchivedPath ?? record.SourcePath),
-                record.DisplayPath));
+                record.DisplayPath,
+                record.Id));
         }
 
         HasRecent = RecentFiles.Count > 0;

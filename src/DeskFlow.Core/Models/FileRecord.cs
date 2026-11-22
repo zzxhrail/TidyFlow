@@ -9,6 +9,9 @@ public enum ArchiveStatus
 
     /// <summary>已撤销归档：文件被放回原位置。</summary>
     Reverted = 4,
+
+    /// <summary>用户主动删除了归档文件（走了回收站）。</summary>
+    Deleted = 5,
 }
 
 /// <summary>一条文件记录：来源、归类、落盘位置、状态。面板与索引都读它。</summary>
@@ -56,6 +59,7 @@ public sealed class FileRecord
         ArchiveStatus.Ignored => "已忽略",
         ArchiveStatus.Failed => "失败",
         ArchiveStatus.Reverted => "已撤销",
+        ArchiveStatus.Deleted => "已删除",
         _ => "待接收",
     };
 }

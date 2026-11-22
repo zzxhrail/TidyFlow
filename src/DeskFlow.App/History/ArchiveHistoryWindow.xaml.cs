@@ -186,6 +186,17 @@ public partial class ArchiveHistoryWindow : Window
         menu.Items.Add(NewMenuItem("打开", () => ShellLauncher.Open(row.Record.ArchivedPath)));
         menu.Items.Add(NewMenuItem("在资源管理器中显示", () => ShellLauncher.RevealInExplorer(row.Record.ArchivedPath)));
         menu.Items.Add(new Separator());
+        menu.Items.Add(NewMenuItem("删除（回收站）", () =>
+        {
+            var confirm = MessageBox.Show(
+                $"删除「{row.Record.FileName}」？会移到回收站。",
+                "删除归档文件", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel);
+            if (confirm == MessageBoxResult.OK && _viewModel.DeleteById(row.Record.Id))
+            {
+                StatusText.Text = $"已删除 {row.Record.FileName}";
+                Reload();
+            }
+        }));
         menu.Items.Add(NewMenuItem("撤销这条", async () =>
         {
             if (await _viewModel.UndoAsync(row.Record))
