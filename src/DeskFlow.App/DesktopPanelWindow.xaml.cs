@@ -534,6 +534,24 @@ public partial class DesktopPanelWindow : Window
     }
 
     /// <summary>鼠标离开后重新开始 650ms 计时，让它能再次隐去。</summary>
+    /// <summary>量一下收起条"一行图标 + 名字"需要多高，作为收起态的最小高度。</summary>
+    private double MeasureCollapsedBarHeight()
+    {
+        if (CollapsedBar is null)
+        {
+            return 64;
+        }
+
+        CollapsedBar.Visibility = Visibility.Visible;
+        CollapsedBar.Measure(new Size(Math.Max(200, ActualWidth - 40), double.PositiveInfinity));
+        var content = CollapsedBar.DesiredSize.Height;
+
+        // 加上 CollapsedBar 的上下外边距（8+8）和 Root 的上下留白
+        var height = Math.Max(64, Math.Ceiling(content + 16 + 12));
+        Services.Diagnostics.Log($"collapsed natural height={content:F1} → min={height:F1}");
+        return height;
+    }
+
     private void RearmSliver()
     {
         if (!_collapsed || _dockEdge == DockEdge.None)
@@ -722,11 +740,13 @@ public partial class DesktopPanelWindow : Window
             _expandedHeight = Height;
             _topmostBeforeCollapse = Topmost;
 
-            MinHeight = 48;   // 收起态允许拖拽调整高度（上下都能拖）
+            // 最小高度 = 收起条的自然高度：一行图标 + 文字刚好放得下，再矮就会切字
+            var natural = MeasureCollapsedBarHeight();
+            MinHeight = natural;
             MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
             BodyScroller.Visibility = Visibility.Collapsed;
             CollapsedBar.Visibility = Visibility.Visible;
-            Height = Math.Clamp(_settings.PanelCollapsedHeight, 48, Math.Max(320, SystemParameters.WorkArea.Height - 24));
+            Height = Math.Clamp(_settings.PanelCollapsedHeight, natural, Math.Max(320, SystemParameters.WorkArea.Height - 24));
 
             // 收起后置顶，随时能点到（用户也可以再点按钮取消）
             Topmost = true;
