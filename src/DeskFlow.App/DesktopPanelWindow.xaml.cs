@@ -921,9 +921,20 @@ public partial class DesktopPanelWindow : Window
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettingsWindow();
 
     /// <summary>标题栏「更多」：把归档记录 / 设置 / 文件盘点收进一个菜单，给标题腾地方。</summary>
+    /// <summary>"⋯"菜单顶部显示版本号：用户能一眼确认自己跑的是哪一版（避免"我明明是新的"却看到旧界面）。</summary>
     private void OpenMoreMenu_Click(object sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu();
+
+        // 顶部一行版本号（不可点）：排查"怎么还是旧界面"时第一眼就能确认跑的哪一版
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        menu.Items.Add(new MenuItem
+        {
+            Header = $"TidyFlow {version?.ToString(3) ?? "?"}",
+            IsEnabled = false,
+            FontWeight = System.Windows.FontWeights.SemiBold,
+        });
+        menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
         menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
         menu.Items.Add(new Separator());
