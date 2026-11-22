@@ -1,12 +1,16 @@
 using System.Text;
 using DeskFlow.Core.Abstractions;
+using DeskFlow.Core.Categorization;
 using DeskFlow.Core.Models;
 using DeskFlow.Core.Runtime;
 using DeskFlow.Infrastructure;
+using DeskFlow.Infrastructure.Archive;
+using DeskFlow.Infrastructure.Index;
 using DeskFlow.Infrastructure.Inputs;
 using DeskFlow.Infrastructure.Observers;
 using DeskFlow.Infrastructure.Settings;
 using DeskFlow.Infrastructure.Steps;
+using DeskFlow.Infrastructure.Watch;
 
 // 零依赖检查程序：不引入 xUnit/NUnit，保证离线可跑、结果就是退出码。
 // 用法: dotnet run --project tests/DeskFlow.Checks
@@ -200,11 +204,151 @@ Console.WriteLine("[6] 契约边界");
     Check("空目录：任务成功且只有表头", emptyReport.Succeeded && headerOnly.Length == 1, $"lines={headerOnly.Length}");
 }
 
+
+// ---------- 7. 分类目录 ----------
+Console.WriteLine("[7] CategoryCatalog");
+{
+    var catalog = new CategoryCatalog();
+    Check("docx → 办公文档", catalog.Resolve("季度报告.docx").Name == "办公文档", catalog.Resolve("季度报告.docx").Name);
+    Check("cs → 代码", catalog.Resolve("Program.cs").Name == "代码", catalog.Resolve("Program.cs").Name);
+    Check("未知扩展名 → 其他", catalog.Resolve("a.xyz").Name == "其他", catalog.Resolve("a.xyz").Name);
+    Check("无扩展名 → 其他", catalog.Resolve("README").Name == "其他");
+
+    catalog.UpsertUserCategory("日志", [".log", "trace"]);
+    Check("自定义类别生效", catalog.Resolve("app.log").Name == "日志", catalog.Resolve("app.log").Name);
+    Check("扩展名可省略点号", catalog.Resolve("x.trace").Name == "日志", catalog.Resolve("x.trace").Name);
+
+    catalog.UpsertUserCategory("办公文档", [".pages"]);
+    Check("同名覆盖内置且保留原扩展名",
+        catalog.Resolve("a.pages").Name == "办公文档" && catalog.Resolve("a.docx").Name == "办公文档");
+    Check("用户类别可删除", catalog.RemoveUserCategory("日志") && catalog.Resolve("app.log").Name == "其他");
+}
+
+// ---------- 8. 归档器 ----------
+Console.WriteLine("[8] FileArchiver");
+{
+    var root = NewTempDir();
+    var inbox = Path.Combine(root, "inbox");
+    var archiveRoot = Path.Combine(root, "archive");
+    Directory.CreateDirectory(inbox);
+
+    var catalog = new CategoryCatalog();
+    var archiver = new FileArchiver(catalog);
+
+    var doc = Path.Combine(inbox, "季度报告.docx");
+    await File.WriteAllTextAsync(doc, "v1");
+    var record = NewRecord(doc, FileSource.WeChat);
+    var outcome = await archiver.ArchiveAsync(record, new ArchiveOptions { ArchiveRoot = archiveRoot });
+
+    Check("归档成功", outcome.Success && !outcome.Duplicate, outcome.Error);
+    Check("落到类别子目录", record.ArchivedPath == Path.Combine(archiveRoot, "办公文档", "季度报告.docx"), record.ArchivedPath);
+    Check("类别被写回记录", record.Category == "办公文档");
+    Check("复制模式保留原件", File.Exists(doc));
+
+    var duplicate = await archiver.ArchiveAsync(NewRecord(doc, FileSource.WeChat), new ArchiveOptions { ArchiveRoot = archiveRoot });
+    Check("同内容判重", duplicate.Duplicate && duplicate.Record.ArchivedPath == record.ArchivedPath);
+
+    var conflict = Path.Combine(inbox, "季度报告.docx");
+    await File.WriteAllTextAsync(conflict, "v2-different-content");
+    var second = NewRecord(conflict, FileSource.Qq);
+    var conflictOutcome = await archiver.ArchiveAsync(second, new ArchiveOptions { ArchiveRoot = archiveRoot });
+    Check("同名不同内容改名 (2)", conflictOutcome.Success && second.ArchivedPath!.EndsWith("季度报告 (2).docx", StringComparison.Ordinal), second.ArchivedPath);
+
+    var moveSource = Path.Combine(inbox, "脚本.py");
+    await File.WriteAllTextAsync(moveSource, "print(1)");
+    var moveRecord = NewRecord(moveSource, FileSource.DingTalk);
+    await archiver.ArchiveAsync(moveRecord, new ArchiveOptions { ArchiveRoot = archiveRoot, MoveInsteadOfCopy = true });
+    Check("移动模式删除原件", !File.Exists(moveSource) && File.Exists(moveRecord.ArchivedPath));
+    Check("py 归到代码目录", moveRecord.ArchivedPath!.Contains(Path.Combine("archive", "代码")), moveRecord.ArchivedPath);
+
+    // 原件消失后必须报失败，而不是假装成功
+    var ghost = NewRecord(Path.Combine(inbox, "不存在.pdf"), FileSource.Qq);
+    var ghostOutcome = await archiver.ArchiveAsync(ghost, new ArchiveOptions { ArchiveRoot = archiveRoot });
+    Check("源文件不存在 → 失败", !ghostOutcome.Success && ghost.Status == ArchiveStatus.Failed);
+}
+
+// ---------- 9. 监听器 ----------
+Console.WriteLine("[9] IncomingWatcher");
+{
+    var dir = NewTempDir();
+    await File.WriteAllTextAsync(Path.Combine(dir, "old.txt"), "already here");
+    var watcher = new IncomingWatcher([new WatchTarget("测试", dir, FileSource.Qq, true)]);
+    watcher.PrimeExisting();
+    var first = await Task.FromResult(watcher.ScanOnce());
+    Check("启动前的旧文件不重复上报", first.Count == 0, first.Count.ToString());
+
+    var file = Path.Combine(dir, "new.txt");
+    await File.WriteAllTextAsync(file, "abc");
+    var probe = await Task.FromResult(watcher.ScanOnce());
+    await File.AppendAllTextAsync(file, "在写");
+    var writing = await Task.FromResult(watcher.ScanOnce());
+    var stable = await Task.FromResult(watcher.ScanOnce());
+
+    Check("首次发现只做大小探针", probe.Count == 0, probe.Count.ToString());
+    Check("仍在写入的文件不上报", writing.Count == 0, writing.Count.ToString());
+    Check("大小稳定后上报一次", stable.Count == 1 && stable[0].FullPath == file, stable.Count.ToString());
+    Check("同一文件不会重复上报", watcher.ScanOnce().Count == 0);
+    Check("来源被正确标注", stable.Count == 1 && stable[0].Source == FileSource.Qq);
+    watcher.Dispose();
+}
+
+// ---------- 10. 索引 ----------
+Console.WriteLine("[10] JsonArchiveIndex");
+{
+    var path = Path.Combine(NewTempDir(), "index.json");
+    var index = new JsonArchiveIndex(path);
+    var archived = NewRecord(Path.Combine(NewTempDir(), "a.docx"), FileSource.Qq);
+    archived.Status = ArchiveStatus.Archived;
+    archived.ArchivedAt = DateTimeOffset.Now;
+    index.Upsert(archived);
+
+    var pending = NewRecord(Path.Combine(NewTempDir(), "b.pdf"), FileSource.WeChat);
+    pending.Status = ArchiveStatus.Pending;
+    index.Upsert(pending);
+
+    Check("归档记录进 Recent", index.Recent(10).Any(r => r.Id == archived.Id));
+    Check("待接收单独成列", index.Pending().Count == 1 && index.Pending()[0].Id == pending.Id);
+    Check("按源路径判重", index.KnowsSourcePath(archived.SourcePath));
+
+    var reloaded = new JsonArchiveIndex(path);
+    Check("索引持久化", reloaded.All.Count == 2 && reloaded.Pending().Count == 1, reloaded.All.Count.ToString());
+
+    reloaded.Remove(pending.Id);
+    Check("删除记录", new JsonArchiveIndex(path).All.Count == 1);
+}
+
+// ---------- 11. 配置 ----------
+Console.WriteLine("[11] ArchiveSettings");
+{
+    var proxy = new FakeSettingsProxy();
+    var settings = new ArchiveSettings(proxy);
+    settings.SetAutoDownload(FileSource.DingTalk, true);
+    Check("自动下载开关落盘", settings.IsAutoDownload(FileSource.DingTalk) && !settings.IsAutoDownload(FileSource.Qq));
+
+    settings.AddUserCategory("合同", [".pdf2"]);
+    var reloaded = new ArchiveSettings(proxy);
+    Check("自定义类别持久化", reloaded.UserCategories.Any(c => c[0] == "合同"), reloaded.UserCategories.Count.ToString());
+
+    settings.Shortcuts.Add(new DeskFlow.Infrastructure.Settings.ShortcutItem { Name = "计算器", Path = @"C:\Windows\System32\calc.exe" });
+    settings.Save();
+    Check("快捷方式持久化", new ArchiveSettings(proxy).Shortcuts.Any(s => s.Name == "计算器"));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0
     ? $"全部通过：{checks} 项检查"
     : $"失败 {failures} / {checks} 项");
 return failures == 0 ? 0 : 1;
+
+static FileRecord NewRecord(string path, FileSource source) => new()
+{
+    Id = Guid.NewGuid().ToString("N"),
+    SourcePath = path,
+    FileName = Path.GetFileName(path),
+    SizeBytes = File.Exists(path) ? new FileInfo(path).Length : 0,
+    Source = source,
+    Category = "其他",
+};
 
 static JobContext TestContext(string inputRoot, bool recurse = true, string? output = null) => new()
 {
@@ -215,3 +359,17 @@ static JobContext TestContext(string inputRoot, bool recurse = true, string? out
     Settings = new JsonSettingsStore(Path.Combine(Path.GetTempPath(), "deskflow-checks", "settings.json")),
     Recurse = recurse,
 };
+/// <summary>内存版设置代理，自检不碰真实 %LOCALAPPDATA%\DeskFlow\settings.json。</summary>
+internal sealed class FakeSettingsProxy : DeskFlow.Infrastructure.Settings.ISettingsProxy
+{
+    private readonly Dictionary<string, object?> _values = new();
+
+    public T? Get<T>(string key, T? fallback = default) =>
+        _values.TryGetValue(key, out var value) && value is T typed ? typed : fallback;
+
+    public void Set<T>(string key, T value) => _values[key] = value;
+
+    public void Flush()
+    {
+    }
+}
