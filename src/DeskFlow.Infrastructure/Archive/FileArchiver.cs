@@ -47,6 +47,12 @@ public sealed class FileArchiver
                     categoryName = byContent.Category;
                     record.CategoryReason = $"内容识别（{byContent.Reason}）";
                 }
+                else if (options.UnrecognizedBucket && options.UseContentClassification && IsContentClassifiable(record.FileName))
+                {
+                    // 文档类文件但内容判不出来 → 收进「未识别」，别硬塞进扩展名类别
+                    categoryName = "未识别";
+                    record.CategoryReason = "内容识别失败（未能判断类别）";
+                }
                 else
                 {
                     categoryName = _categories.Resolve(record.FileName).Name;
@@ -158,6 +164,14 @@ public sealed class FileArchiver
             return ArchiveOutcome.Failed(record, ex.Message);
         }
     }
+
+    /// <summary>这些类型的"内容"才值得判；图片/压缩包/安装包直接按扩展名走。</summary>
+    public static bool IsContentClassifiable(string fileName) =>
+        Path.GetExtension(fileName).ToLowerInvariant() is
+            ".doc" or ".docx" or ".pdf" or ".txt" or ".md" or ".rtf" or ".one"
+            or ".xls" or ".xlsx" or ".xlsm" or ".csv"
+            or ".ppt" or ".pptx" or ".pps" or ".ppsx"
+            or ".json" or ".xml" or ".yml" or ".yaml" or ".log";
 
     public static string SanitizeFolderName(string name)
     {

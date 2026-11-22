@@ -10,6 +10,9 @@ public sealed class ArchiveOptions
     /// <summary>同名同内容视为重复，直接跳过并不覆盖。</summary>
     public bool SkipDuplicates { get; init; } = true;
 
+    /// <summary>内容判不准时把文档类文件放进「未识别」，而不是退回扩展名类别。</summary>
+    public bool UnrecognizedBucket { get; init; }
+
     /// <summary>是否启用"按内容分类"（读正文关键词判断类别），默认开启。</summary>
     public bool UseContentClassification { get; init; } = true;
 

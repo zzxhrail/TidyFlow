@@ -1039,6 +1039,7 @@ public sealed class PanelViewModel : ObservableObject
                 MoveInsteadOfCopy = move,
                 CategoryOverride = categoryName,
                 UseContentClassification = _settings.ContentClassification,
+                UnrecognizedBucket = _settings.UnrecognizedBucket,
             });
 
             _index.Upsert(outcome.Record);
@@ -1177,6 +1178,7 @@ public sealed class PanelViewModel : ObservableObject
                 ArchiveRoot = _settings.ArchiveRoot,
                 MoveInsteadOfCopy = _settings.MoveInsteadOfCopy,
                 UseContentClassification = _settings.ContentClassification,
+                UnrecognizedBucket = _settings.UnrecognizedBucket,
             });
 
             _index.Upsert(outcome.Record);

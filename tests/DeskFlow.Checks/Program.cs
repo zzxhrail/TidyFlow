@@ -689,6 +689,39 @@ Console.WriteLine("[20.5] Extension mapping");
     Check("docx → 办公文档", catalog.Resolve("周报.docx").Name == "办公文档", catalog.Resolve("周报.docx").Name);
 }
 
+// ---------- 20.6 未识别桶 ----------
+Console.WriteLine("[20.6] Unrecognized bucket");
+{
+    var root = NewTempDir();
+    var archiveRoot = Path.Combine(root, "archive");
+    var classifier = new DeskFlow.Infrastructure.Analysis.KeywordContentClassifier();
+    var archiver = new FileArchiver(new CategoryCatalog(), classifier);
+
+    var doc = Path.Combine(root, "随手记.docx");
+    using (var zip = System.IO.Compression.ZipFile.Open(doc, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        var entry = zip.CreateEntry("word/document.xml");
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write("<?xml version=\"1.0\"?><w:document><w:body><w:p><w:r><w:t>今天下午三点和仓库确认一下架子的尺寸问题</w:t></w:r></w:p></w:body></w:document>");
+    }
+
+    var withBucket = NewRecord(doc, FileSource.Manual);
+    await archiver.ArchiveAsync(withBucket, new ArchiveOptions { ArchiveRoot = archiveRoot, UnrecognizedBucket = true });
+    Check("判不出来 → 未识别", withBucket.Category == "未识别", withBucket.Category);
+    Check("目录自动创建", Directory.Exists(Path.Combine(archiveRoot, "未识别")));
+    Check("记录了原因", withBucket.CategoryReason?.Contains("未能判断") == true, withBucket.CategoryReason);
+
+    var withoutBucket = NewRecord(doc, FileSource.Manual);
+    await archiver.ArchiveAsync(withoutBucket, new ArchiveOptions { ArchiveRoot = archiveRoot, UnrecognizedBucket = false });
+    Check("关掉开关 → 按扩展名", withoutBucket.Category == "办公文档", withoutBucket.Category);
+
+    var image = Path.Combine(root, "截图.png");
+    await File.WriteAllTextAsync(image, new string('x', 2048));
+    var imageRecord = NewRecord(image, FileSource.Manual);
+    await archiver.ArchiveAsync(imageRecord, new ArchiveOptions { ArchiveRoot = archiveRoot, UnrecognizedBucket = true });
+    Check("图片不受影响，仍进图片", imageRecord.Category == "图片", imageRecord.Category);
+}
+
 // ---------- 21. 内容分类准确率 ----------
 Console.WriteLine("[21] Classifier accuracy");
 {

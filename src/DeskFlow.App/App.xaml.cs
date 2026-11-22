@@ -75,6 +75,14 @@ public partial class App : Application
     {
         try
         {
+            try
+            {
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
+            }
+            catch (IOException)
+            {
+            }
+
             var settings = new Infrastructure.Settings.ArchiveSettings();
             var catalog = new Core.Categorization.CategoryCatalog();
             var archiver = new Infrastructure.Archive.FileArchiver(catalog, new Infrastructure.Analysis.KeywordContentClassifier());
@@ -107,6 +115,7 @@ public partial class App : Application
                     ArchiveRoot = settings.ArchiveRoot,
                     MoveInsteadOfCopy = settings.MoveInsteadOfCopy,
                     UseContentClassification = settings.ContentClassification,
+                    UnrecognizedBucket = settings.UnrecognizedBucket,
                 }).GetAwaiter().GetResult();
 
                 if (outcome.Success)

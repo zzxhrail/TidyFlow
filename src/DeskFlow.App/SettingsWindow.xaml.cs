@@ -39,6 +39,7 @@ public partial class SettingsWindow : Window
         MoveCheck.IsChecked = settings.MoveInsteadOfCopy;
         ContentAiCheck.IsChecked = settings.ContentClassification;
         SpacePreviewCheck.IsChecked = settings.SpacePreviewEnabled;
+        UnrecognizedCheck.IsChecked = settings.UnrecognizedBucket;
 
         RefreshWatchList();
         RefreshCategories();
@@ -444,6 +445,7 @@ public partial class SettingsWindow : Window
         _settings.MoveInsteadOfCopy = MoveCheck.IsChecked == true;
         _settings.ContentClassification = ContentAiCheck.IsChecked == true;
         _settings.SpacePreviewEnabled = SpacePreviewCheck.IsChecked == true;
+        _settings.UnrecognizedBucket = UnrecognizedCheck.IsChecked == true;
 
         _settings.GlobalWatchEnabled = GlobalWatchCheck.IsChecked == true;
         _settings.GlobalRoots = CurrentGlobalRoots();

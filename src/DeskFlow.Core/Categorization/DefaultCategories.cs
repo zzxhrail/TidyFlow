@@ -34,6 +34,7 @@ public static class DefaultCategories
         new("安装包",
             [".exe", ".msi", ".apk", ".dmg", ".pkg", ".deb", ".rpm"],
             isBuiltIn: true, glyph: "\uE896"),
+        new("未识别", [], isBuiltIn: true, glyph: "\uE7BA"),
         new(FallbackName, [], isBuiltIn: true, glyph: "\uE8A5"),
     ];
 }
