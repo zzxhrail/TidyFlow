@@ -830,3 +830,20 @@ System.InvalidOperationException: Transform is not valid for Window.
 | 5 | 收起状态**自动置顶**，右侧按钮可切换 |
 | 6 | ⋯ 菜单顺序：设置 → 归档记录 →（细线）→ 扫描磁盘 |
 | 7 | 菜单分隔线加长并居中 |
+
+
+## CI：GitHub Actions
+
+仓库里原来那份 `.github/workflows/dotnet-desktop.yml` 是 GitHub 的**模板**，占位符都没替换（`Solution_Name: your-solution-name`、`dotnet-version: 8.0.x`、还要求一个不存在的 WAP/MSIX 打包项目），所以每次 push 必红。
+
+现在替换为 `.github/workflows/build.yml`，只做四件确定的事：
+
+| 步骤 | 命令 |
+| --- | --- |
+| 装 SDK | `actions/setup-dotnet` → `10.0.x`（本项目是 net10.0-windows） |
+| 还原 | `dotnet restore DeskFlow.sln` |
+| 编译 | `dotnet build DeskFlow.sln -c Release --no-restore` |
+| 自检 | `dotnet run --project tests/DeskFlow.Checks -c Release --no-build`（171 项） |
+| 发布 | `dotnet publish src/DeskFlow.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o dist`，产物 `TidyFlow.exe` 上传为 artifact |
+
+这套命令与本地 `build/pack.ps1` 完全一致，本地已跑通（Release 构建 5 个警告、171 项自检全通过、单文件 exe 66.7 MB）。
