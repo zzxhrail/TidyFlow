@@ -7,6 +7,8 @@ using DeskFlow.Core.Runtime;
 using DeskFlow.Infrastructure;
 using DeskFlow.Infrastructure.Archive;
 using DeskFlow.Infrastructure.Index;
+using DeskFlow.Infrastructure.History;
+using DeskFlow.Infrastructure.Services;
 using DeskFlow.Infrastructure.Inputs;
 using DeskFlow.Infrastructure.Observers;
 using DeskFlow.Infrastructure.Settings;
@@ -433,6 +435,147 @@ Console.WriteLine("[14] GlobalWatchFilter");
     Check("IsUnder 子树判定", GlobalWatchFilter.IsUnder(@"D:\archive\2026\x.txt", @"D:\archive"));
     Check("IsUnder 不误判同前缀", !GlobalWatchFilter.IsUnder(@"D:\archive2\x.txt", @"D:\archive"));
     Check("默认类型含 docx/pdf", GlobalWatchFilter.DefaultExtensions.Contains(".docx") && GlobalWatchFilter.DefaultExtensions.Contains(".pdf"));
+}
+
+
+// ---------- 15. 撤销归档 + 归档日志 ----------
+Console.WriteLine("[15] Undo & ArchiveLog");
+{
+    var root = NewTempDir();
+    var inbox = Path.Combine(root, "inbox");
+    var archiveRoot = Path.Combine(root, "archive");
+    Directory.CreateDirectory(inbox);
+    var archiver = new FileArchiver(new CategoryCatalog());
+
+    var source = Path.Combine(inbox, "合同.docx");
+    await File.WriteAllTextAsync(source, "v1");
+    var record = NewRecord(source, FileSource.Global);
+
+    await archiver.ArchiveAsync(record, new ArchiveOptions { ArchiveRoot = archiveRoot, MoveInsteadOfCopy = true });
+    Check("归档后原文件已被移走", !File.Exists(source) && File.Exists(record.ArchivedPath), record.ArchivedPath);
+
+    var undo = await archiver.UndoAsync(record);
+    Check("撤销成功", undo.Success, undo.Error);
+    Check("文件回到原位置", File.Exists(source));
+    Check("归档目录已清空", record.ArchivedPath is null && !Directory.EnumerateFiles(archiveRoot, "*", SearchOption.AllDirectories).Any());
+    Check("状态标记为已撤销", record.Status == ArchiveStatus.Reverted);
+    Check("记录里保留了放回路径", record.RestoredPath == source);
+
+    // 原位置被占用时不能覆盖
+    var record2 = NewRecord(source, FileSource.Global);
+    await archiver.ArchiveAsync(record2, new ArchiveOptions { ArchiveRoot = archiveRoot, MoveInsteadOfCopy = true });
+    await File.WriteAllTextAsync(source, "new file occupying the original path");
+    var undo2 = await archiver.UndoAsync(record2);
+    Check("原位置被占用时改名放回", undo2.Success && record2.RestoredPath != source && File.Exists(record2.RestoredPath), record2.RestoredPath);
+    Check("不覆盖已有文件", (await File.ReadAllTextAsync(source)).StartsWith("new file"));
+
+    // 归档文件丢失 → 撤销失败
+    var ghost = NewRecord(Path.Combine(inbox, "gone.docx"), FileSource.Global);
+    ghost.Status = ArchiveStatus.Archived;
+    ghost.ArchivedPath = Path.Combine(archiveRoot, "不存在.docx");
+    var undo3 = await archiver.UndoAsync(ghost);
+    Check("归档文件不在时报失败", !undo3.Success);
+
+    // 日志
+    var logPath = Path.Combine(root, "archive-log.jsonl");
+    var log = new DeskFlow.Infrastructure.History.ArchiveLog(logPath);
+    log.Archive("a.docx", "办公文档", "QQ", @"D:srca.docx", @"D:archive办公文档a.docx");
+    log.Undo("a.docx", "办公文档", "QQ", @"D:archive办公文档a.docx", @"D:srca.docx");
+
+    var tail = log.Tail(10);
+    Check("日志写了两条", tail.Count == 2, tail.Count.ToString());
+    Check("日志最新在前", tail[0].Action == "undo" && tail[1].Action == "archive");
+    Check("日志保留原位置", tail[1].From == @"D:srca.docx");
+}
+
+
+// ---------- 16. 批次分组 ----------
+Console.WriteLine("[16] ArchiveBatches");
+{
+    var now = DateTimeOffset.Now;
+    FileRecord Make(string name, string category, string? batchId, int minutesAgo) => new()
+    {
+        Id = name,
+        SourcePath = Path.Combine(@"D:\src", name),
+        FileName = name,
+        SizeBytes = 10,
+        Source = FileSource.Qq,
+        Category = category,
+        Status = ArchiveStatus.Archived,
+        ArchivedPath = Path.Combine(@"D:\archive", category, name),
+        ArchivedAt = now.AddMinutes(-minutesAgo),
+        BatchId = batchId,
+    };
+
+    var records = new List<FileRecord>
+    {
+        Make("a.docx", "办公文档", "b1", 1),
+        Make("b.docx", "办公文档", "b1", 1),
+        Make("c.pdf", "办公文档", "b1", 1),
+        Make("d.png", "图片", "b2", 5),
+        Make("e.png", "图片", "b2", 5),
+    };
+
+    var batches = ArchiveBatches.Group(records);
+    Check("两条批次", batches.Count == 2, batches.Count.ToString());
+    Check("按最近时间排序", batches[0].Category == "办公文档" && batches[0].Count == 3, batches[0].Display);
+    Check("批次里带全部记录", batches[0].Records.Count == 3);
+    Check("批次展示文本可读", batches[0].Display.Contains("办公文档") && batches[0].Display.Contains("3 个文件"));
+
+    // 老记录没有 BatchId → 同类别 + 同一分钟兜底聚在一起
+    var legacy = new List<FileRecord>
+    {
+        Make("x.docx", "办公文档", null, 2),
+        Make("y.docx", "办公文档", null, 2),
+        Make("z.png", "图片", null, 2),
+    };
+    var legacyBatches = ArchiveBatches.Group(legacy);
+    Check("无批次号时按类别+分钟兜底", legacyBatches.Count == 2, legacyBatches.Count.ToString());
+    Check("同类别两条归一批", legacyBatches.Any(b => b.Category == "办公文档" && b.Count == 2));
+}
+
+Console.WriteLine("[17] RecycleBin");
+{
+    var dir = NewTempDir();
+    var file = Path.Combine(dir, "to-delete.txt");
+    await File.WriteAllTextAsync(file, "bye");
+    var ok = RecycleBin.TryDelete(file);
+    Check("删除成功", ok);
+    Check("文件真的没了", !File.Exists(file));
+    Check("删不存在的文件返回 false", !RecycleBin.TryDelete(file));
+}
+
+
+// ---------- 18. 拖入指定分类 ----------
+Console.WriteLine("[18] Drop into category");
+{
+    var root = NewTempDir();
+    var inbox = Path.Combine(root, "inbox");
+    var archiveRoot = Path.Combine(root, "archive");
+    Directory.CreateDirectory(inbox);
+    var archiver = new FileArchiver(new CategoryCatalog());
+
+    var file = Path.Combine(inbox, "随手拍的图.png");
+    await File.WriteAllTextAsync(file, "png-bytes");
+    var record = NewRecord(file, FileSource.Manual);
+
+    // 强制放到"我的收藏"（本来图片会进"图片"）
+    var outcome = await archiver.ArchiveAsync(record, new ArchiveOptions
+    {
+        ArchiveRoot = archiveRoot,
+        CategoryOverride = "我的收藏",
+    });
+
+    Check("拖入成功", outcome.Success, outcome.Error);
+    Check("落在指定分类里", record.Category == "我的收藏", record.Category);
+    Check("路径在 我的收藏 目录下",
+        record.ArchivedPath!.Contains(Path.Combine("archive", "我的收藏")), record.ArchivedPath);
+    Check("默认是复制，原件还在", File.Exists(file));
+
+    // 不指定分类时仍然按扩展名自动分类
+    var auto = NewRecord(file, FileSource.Manual);
+    await archiver.ArchiveAsync(auto, new ArchiveOptions { ArchiveRoot = archiveRoot });
+    Check("不指定时自动分类", auto.Category == "图片", auto.Category);
 }
 
 Console.WriteLine();

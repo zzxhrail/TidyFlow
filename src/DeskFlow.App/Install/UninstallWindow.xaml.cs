@@ -15,6 +15,8 @@ public partial class UninstallWindow : Window
     public UninstallWindow(SetupOptions options)
     {
         InitializeComponent();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
+        HeaderLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/icon-48.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _options = options;
         KeepDataCheck.IsChecked = options.KeepUserData;
@@ -38,8 +40,8 @@ public partial class UninstallWindow : Window
         }
 
         var confirm = MessageBox.Show(
-            "确定要卸载 DeskFlow 吗？\n\n归档目录里的文件和你的文档不会被删除。",
-            "卸载 DeskFlow",
+            "确定要卸载 TidyFlow 吗？\n\n归档目录里的文件和你的文档不会被删除。",
+            "卸载 TidyFlow",
             MessageBoxButton.OKCancel,
             MessageBoxImage.Warning,
             MessageBoxResult.Cancel);

@@ -46,8 +46,8 @@ public sealed class TrayIconService : IDisposable
 
         _notifyIcon = new NotifyIcon
         {
-            Icon = CreateIcon(),
-            Text = "DeskFlow 文件管家",
+            Icon = CreateIconFromAsset(),
+            Text = "TidyFlow 文件管家",
             Visible = true,
             ContextMenuStrip = menu,
         };
@@ -56,6 +56,36 @@ public sealed class TrayIconService : IDisposable
         _notifyIcon.DoubleClick += (_, _) => OnUi(showPanel);
 
         Diagnostics.Log("tray icon created");
+    }
+
+    /// <summary>托盘图标：优先用 Assets 里打包好的 TidyFlow 图标，取不到再退回运行时绘制。</summary>
+    private static Icon CreateIconFromAsset()
+    {
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Assets/icon-32.png");
+            var stream = System.Windows.Application.GetResourceStream(uri)?.Stream;
+            if (stream is not null)
+            {
+                using var source = new Bitmap(stream);
+                using var square = new Bitmap(32, 32);
+                using (var g = Graphics.FromImage(square))
+                {
+                    g.SmoothingMode = SmoothingMode.HighQuality;
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(source, 0, 0, 32, 32);
+                }
+
+                var handle = square.GetHicon();
+                return Icon.FromHandle(handle);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log("tray icon from asset failed: " + ex.Message);
+        }
+
+        return CreateIcon();
     }
 
     /// <summary>四个来源的"自动下载"开关，跟面板顶部的勾选是同一份配置。</summary>

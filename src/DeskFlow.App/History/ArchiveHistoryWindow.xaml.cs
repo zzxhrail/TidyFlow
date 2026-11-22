@@ -17,6 +17,7 @@ public partial class ArchiveHistoryWindow : Window
     public ArchiveHistoryWindow(PanelViewModel viewModel)
     {
         InitializeComponent();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;
         RecordList.MouseRightButtonUp += RecordList_RightClick;

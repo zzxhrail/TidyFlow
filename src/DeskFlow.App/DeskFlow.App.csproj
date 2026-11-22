@@ -6,15 +6,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\tidyflow.ico</ApplicationIcon>
     <!-- 托盘图标用 WinForms 的 NotifyIcon（最省事、行为最接近系统原生） -->
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>DeskFlow</AssemblyName>
+    <AssemblyName>TidyFlow</AssemblyName>
     <RootNamespace>DeskFlow.App</RootNamespace>
-    <Product>DeskFlow</Product>
-    <AssemblyTitle>DeskFlow 批量文件盘点与报表</AssemblyTitle>
-    <Version>0.7.0</Version>
-    <FileVersion>0.7.0.0</FileVersion>
-    <AssemblyVersion>0.7.0.0</AssemblyVersion>
+    <Product>TidyFlow</Product>
+    <AssemblyTitle>TidyFlow 文件管家</AssemblyTitle>
+    <Version>0.8.0</Version>
+    <FileVersion>0.8.0.0</FileVersion>
+    <AssemblyVersion>0.8.0.0</AssemblyVersion>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
@@ -32,4 +33,14 @@
     <ProjectReference Include="..\DeskFlow.Deployment\DeskFlow.Deployment.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Assets\icon-16.png" />
+    <Resource Include="Assets\icon-24.png" />
+    <Resource Include="Assets\icon-32.png" />
+    <Resource Include="Assets\icon-48.png" />
+    <Resource Include="Assets\icon-64.png" />
+    <Resource Include="Assets\icon-128.png" />
+    <Resource Include="Assets\icon-256.png" />
+    <Resource Include="Assets\tidyflow.ico" />
+  </ItemGroup>
 </Project>

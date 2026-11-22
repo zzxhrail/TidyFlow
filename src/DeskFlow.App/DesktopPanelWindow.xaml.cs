@@ -348,7 +348,7 @@ public partial class DesktopPanelWindow : Window
             default:
                 if (!ShellLauncher.Open(tile.Path))
                 {
-                    MessageBox.Show($"打不开：{tile.Path}", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show($"打不开：{tile.Path}", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
 
                 break;
@@ -654,7 +654,7 @@ public partial class DesktopPanelWindow : Window
         if (!_trayHintShown)
         {
             _trayHintShown = true;
-            App.Tray?.ShowBalloon("DeskFlow 仍在运行", "已收起到托盘。右键图标可打开设置、重新启动或退出。");
+            App.Tray?.ShowBalloon("TidyFlow 仍在运行", "已收起到托盘。右键图标可打开设置、重新启动或退出。");
         }
     }
 

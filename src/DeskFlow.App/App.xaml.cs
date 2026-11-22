@@ -15,8 +15,8 @@ namespace DeskFlow.App;
 
 /// <summary>
 /// 组合根 + 双入口：
-///   DeskFlow.exe             → 桌面面板（常驻）
-///   DeskFlow.exe --run ...   → 无界面批处理（计划任务/脚本）
+///   TidyFlow.exe             → 桌面面板（常驻）
+///   TidyFlow.exe --run ...   → 无界面批处理（计划任务/脚本）
 /// 面板是主窗口；设置、批处理都是它的子窗口，所以 ShutdownMode 用 OnExplicitShutdown。
 /// </summary>
 public partial class App : Application
@@ -42,6 +42,7 @@ public partial class App : Application
         var exeName = Path.GetFileNameWithoutExtension(Environment.ProcessPath ?? string.Empty);
         var wantsUninstall = e.Args.Any(static a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase));
         var wantsInstall = e.Args.Any(static a => a.Equals("--install", StringComparison.OrdinalIgnoreCase))
+            || exeName.StartsWith("TidyFlow-Setup", StringComparison.OrdinalIgnoreCase)
             || exeName.StartsWith("DeskFlow-Setup", StringComparison.OrdinalIgnoreCase);
 
         if (wantsUninstall)
@@ -132,7 +133,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"DeskFlow 启动失败：{ex.Message}\n\n{ex.StackTrace}", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"TidyFlow 启动失败：{ex.Message}\n\n{ex.StackTrace}", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(2);
         }
     }

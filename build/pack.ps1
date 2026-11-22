@@ -45,7 +45,7 @@ try {
     dotnet @publishArgs
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败，退出码 $LASTEXITCODE" }
 
-    $exe = Join-Path $root "$Output/DeskFlow.exe"
+    $exe = Join-Path $root "$Output/TidyFlow.exe"
     if (-not (Test-Path $exe)) { throw "没有生成 $exe" }
 
     $sizeMb = [math]::Round((Get-Item $exe).Length / 1MB, 1)

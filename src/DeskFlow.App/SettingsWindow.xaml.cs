@@ -29,6 +29,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(PanelViewModel viewModel, ArchiveSettings settings)
     {
         InitializeComponent();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;
         _settings = settings;
@@ -258,7 +259,7 @@ public partial class SettingsWindow : Window
         }
 
         var count = await _viewModel.ImportFilesAsync(dialog.FileNames);
-        MessageBox.Show($"已归档 {count} 个文件。", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show($"已归档 {count} 个文件。", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void RefreshCategories()
@@ -376,7 +377,7 @@ public partial class SettingsWindow : Window
         var raw = CategoryExtBox.Text ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
-            MessageBox.Show("先填类别名", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("先填类别名", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -397,7 +398,7 @@ public partial class SettingsWindow : Window
 
         if (!App.Categories.UserCategories.Any(c => string.Equals(c.Name, row.Value, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show("内置类别不能删除，可以用同名自定义类别覆盖它的扩展名。", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("内置类别不能删除，可以用同名自定义类别覆盖它的扩展名。", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 

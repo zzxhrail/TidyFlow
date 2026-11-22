@@ -15,7 +15,7 @@ public sealed record DeploymentResult(bool Success, string Message);
 [SupportedOSPlatform("windows")]
 public static class InstallLayout
 {
-    public const string ProductName = "DeskFlow";
+    public const string ProductName = "TidyFlow";
     public const string DisplayName = "DeskFlow 文件管家";
     public const string Publisher = "DeskFlow";
 

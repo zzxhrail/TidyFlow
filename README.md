@@ -1,4 +1,4 @@
-# DeskFlow
+# TidyFlow · 文件管家
 
 常驻 Windows 桌面的**文件管家**：自动接住 QQ / 微信 / 钉钉收到和浏览器下载的文件，按类型分门别类归档；桌面上一个面板就能打开最近的文件、进入分类目录、启动常用程序。
 
@@ -95,7 +95,7 @@
 **双击安装包** → 选安装位置、勾开机自启/快捷方式 → 开始安装：
 
 ```
-dist\DeskFlow-Setup-0.6.0.exe
+dist\TidyFlow-Setup-0.6.0.exe
 ```
 
 安装界面能改的东西：
@@ -111,7 +111,7 @@ dist\DeskFlow-Setup-0.6.0.exe
 
 ![卸载界面](docs/screenshot-uninstaller.png)
 
-**卸载**：设置 → 应用 → DeskFlow → 卸载（或直接跑 `DeskFlow.exe --uninstall`）。
+**卸载**：设置 → 应用 → DeskFlow → 卸载（或直接跑 `TidyFlow.exe --uninstall`）。
 卸载界面会显示安装位置与占用空间，并给一个「保留我的配置与归档索引」勾选：
 
 - 勾着（默认）：只删程序、快捷方式、开机自启、卸载项；配置/日志/索引留在 `%LOCALAPPDATA%\DeskFlow`，重装即接上；
@@ -122,9 +122,9 @@ dist\DeskFlow-Setup-0.6.0.exe
 
 ```powershell
 # 安装
-.\DeskFlow-Setup-0.6.0.exe --install --silent --dir="D:\Apps\DeskFlow" --autostart=1 --shortcuts=1
+.\TidyFlow-Setup-0.6.0.exe --install --silent --dir="D:\Apps\DeskFlow" --autostart=1 --shortcuts=1
 # 卸载（保留数据）
-"$env:LOCALAPPDATA\Programs\DeskFlow\DeskFlow.exe" --uninstall --silent --keepdata=1
+"$env:LOCALAPPDATA\Programs\DeskFlow\TidyFlow.exe" --uninstall --silent --keepdata=1
 ```
 
 退出码 0 = 成功。
@@ -132,10 +132,10 @@ dist\DeskFlow-Setup-0.6.0.exe
 ### 绿色版（不安装）
 
 ```
-dist\DeskFlow.exe
+dist\TidyFlow.exe
 ```
 
-同一个 exe：不装也能直接用；文件名以 `DeskFlow-Setup` 开头或带 `--install` 时进安装模式，带 `--uninstall` 时进卸载模式。
+同一个 exe：不装也能直接用；文件名以 `TidyFlow-Setup` 开头或带 `--install` 时进安装模式，带 `--uninstall` 时进卸载模式。
 ---
 
 ## 四、数据放在哪
@@ -331,3 +331,19 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 ![二级导航](docs/screenshot-nav-categories.png)
 
 导航栏高度**跟随窗口**：它占满「来源开关」和日志之间的整段高度（`VerticalAlignment=Stretch` + 中间行 `Height=*`，最小 220px），面板拉高、拉宽都跟着变；窗口高度不足时中间那行至少保留 220px，不会把导航压没。
+
+## 十三、品牌：TidyFlow
+
+![图标](src/DeskFlow.App/Assets/appicon-256.png)
+
+软件名从 DeskFlow 改成 **TidyFlow**，图标换成绿色叠片（4 个圆角方块 + 泪滴形，见上图）。
+
+| 项目 | 变化 |
+| --- | --- |
+| 可执行文件 | TidyFlow.exe（安装包 TidyFlow-Setup-0.8.0.exe） |
+| 程序集 / 产品名 | TidyFlow（窗口标题、托盘提示、卸载项名称同步） |
+| 图标 | Assets/tidyflow.ico（16/24/32/48/64/128/256 七个尺寸，PNG 压缩帧） |
+| 安装目录 | %LOCALAPPDATA%\Programs\TidyFlow |
+| 配置与索引 | 仍然是 %LOCALAPPDATA%\DeskFlow —— **故意没改**，否则老用户的设置和归档索引会丢 |
+
+图标源文件放在 src/DeskFlow.App/Assets/：tidyflow-source.img（原始图）、appicon-256.png、icon-*.png、tidyflow.ico。

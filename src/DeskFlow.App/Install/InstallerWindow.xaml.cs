@@ -17,6 +17,8 @@ public partial class InstallerWindow : Window
     public InstallerWindow(SetupOptions options)
     {
         InitializeComponent();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
+        HeaderLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/icon-48.png"));
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _options = options;
 
@@ -72,7 +74,7 @@ public partial class InstallerWindow : Window
         var directory = PathBox.Text?.Trim();
         if (string.IsNullOrWhiteSpace(directory))
         {
-            MessageBox.Show("请先选择安装位置。", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("请先选择安装位置。", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -112,7 +114,7 @@ public partial class InstallerWindow : Window
         StatusText.Text = $"安装完成：{_installedDirectory}";
         HintText.Text = "已建好快捷方式与卸载项；「设置 → 应用」里可以看到 DeskFlow，可随时卸载。";
         FooterHint.Text = "也可以直接关掉这个窗口";
-        InstallButton.Content = "启动 DeskFlow";
+        InstallButton.Content = "启动 TidyFlow";
         CancelButton.Content = "关闭";
         AutostartCheck.IsEnabled = false;
         DesktopCheck.IsEnabled = false;
