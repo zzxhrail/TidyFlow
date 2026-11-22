@@ -235,10 +235,10 @@ public sealed class PanelViewModel : ObservableObject
     public bool IsCategorySection => _section == "category";
 
     /// <summary>一级导航：应用与快捷方式 / 最近归档 / 分类。</summary>
-    public List<NavEntry> RootNav { get; } = new();
+    public ObservableCollection<NavEntry> RootNav { get; } = new();
 
     /// <summary>二级导航：某个一级项（目前是「分类」）下面的条目。</summary>
-    public List<NavEntry> CategoryNav { get; } = new();
+    public ObservableCollection<NavEntry> CategoryNav { get; } = new();
 
     private bool _navInCategories;
 
@@ -566,8 +566,7 @@ public sealed class PanelViewModel : ObservableObject
             CategoryNav.Add(new NavEntry(category.Title, string.Empty, "category", category.Path ?? string.Empty));
         }
 
-        OnPropertyChanged(nameof(RootNav));
-        OnPropertyChanged(nameof(CategoryNav));
+        // ObservableCollection 自己会发变更通知，这里不用再手动通知
     }
 
     public void RefreshAll()

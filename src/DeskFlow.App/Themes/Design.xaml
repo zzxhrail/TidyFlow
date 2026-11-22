@@ -29,6 +29,8 @@
     <Color x:Key="ColorAccentPressed">#4FB8E8</Color>
 
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ColorAccent}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource ColorAccentPressed}" />
     <SolidColorBrush x:Key="AccentDeepBrush" Color="#3A96DD" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource ColorControlFill}" />
     <SolidColorBrush x:Key="SurfaceStrongBrush" Color="{StaticResource ColorCard}" />
@@ -110,10 +112,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorAccentHover}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ColorAccentPressed}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPressedBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4" />

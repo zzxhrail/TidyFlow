@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
         _viewModel.Logs.CollectionChanged += OnLogsChanged;

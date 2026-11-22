@@ -69,6 +69,8 @@ public partial class DesktopPanelWindow : Window
         _pinned = settings.PanelPinned;
 
         Loaded += OnLoaded;
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
+
         SizeChanged += OnSizeChanged;
         _resizeTimer.Tick += OnResizeSettled;
 

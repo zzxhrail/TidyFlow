@@ -195,7 +195,16 @@ TidyFlow.exe
 - **用途**：对某个目录做一次性盘点与报表（不参与常驻归档流程）。
 - **入口**：面板 ⋯ → 文件盘点；或命令行 `--run <目录> --out <输出目录>`。
 
-### 4.15 诊断与可观测（Diagnostics / crash.log / install.log / --classify）
+### 4.15 稳定性红线（踩过的坑，必须守住）
+
+| 红线 | 原因 | 检查方式 |
+| --- | --- | --- |
+| 资源字典里 **Color 不能当 Brush 用** | `{StaticResource ColorXxx}` 赋给 `Background` 等 Brush 属性，编译期不报错，**渲染时才抛异常**；悬停触发 → 每帧重试 → 极卡并最终闪退 | 改样式只引用 `XxxBrush`；搜 `StaticResource Color` 不得出现在 Brush 属性上 |
+| 窗口 **Icon 不要写相对路径** | `Icon="Assets/x.ico"` 会按窗口所在文件夹解析，子目录窗口变成 `history/assets/x.ico` → 找不到资源 → 打开即崩 | 统一在代码里用 `pack://application:,,,/Assets/icon-128.png` |
+| 绑定到 ListBox 的集合必须是 **ObservableCollection** | 用 `List<T>` 原地 Clear/Add 不发通知 → 生成器状态不一致 → `InvalidOperationException` | 导航类数据一律用 ObservableCollection |
+| `async void` 必须自己兜异常 | 漏出的异常直接结束进程（无提示） | 事件处理器内部 try/catch |
+
+### 4.16 诊断与可观测（Diagnostics / crash.log / install.log / --classify）
 - **用途**：出问题时能自证。
 - **内容**：布局与渲染层级日志（`DESKFLOW_DEBUG=1`）、未处理异常 `crash.log`、安装失败 `install.log`、`--classify` 打印分类判定依据。
 
@@ -283,6 +292,7 @@ InstallerService ──▶ InstallLayout（快捷方式/自启/卸载项）
 
 | 版本 | 日期 | 变化摘要 |
 | --- | --- | --- |
+| 0.8.7 | 2026-11-22 | 修「极卡 + 点模块闪退」：颜色资源误当画刷（悬停即抛异常）、归档记录窗口图标资源找不到、分类导航集合与 ListBox 不一致；全部补齐并加日志 |
 | 0.8.6 | 2026-11-22 | 内容分类改为加权打分 + 类型先验 + 宁可弃判；新增 学习资料/通知公告 类别；拆出 表格/演示文稿 |
 | 0.8.5 | 2026-11-22 | 拖放到面板任意位置都能收录（窗口级 handledEventsToo） |
 | 0.8.4 | 2026-11-22 | 悬停按空格快速预览（全局钩子，设置内可关） |
