@@ -93,6 +93,16 @@ public partial class App : Application
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
 
+            // --history：直接打开归档记录（可撤销）
+            if (e.Args.Any(static x => x.Equals("--history", StringComparison.OrdinalIgnoreCase)))
+            {
+                var historyOnly = new History.ArchiveHistoryWindow(Panel);
+                MainWindow = historyOnly;
+                historyOnly.Closed += (_, _) => Shutdown(0);
+                historyOnly.Show();
+                return;
+            }
+
             // --settings：直接打开设置（调试/给用户建快捷方式用）
             if (e.Args.Any(static x => x.Equals("--settings", StringComparison.OrdinalIgnoreCase)))
             {
@@ -112,6 +122,7 @@ public partial class App : Application
                 Settings,
                 showPanel: ShowPanelFromTray,
                 openSettings: OpenSettingsFromTray,
+                openHistory: OpenHistoryFromTray,
                 restart: RestartApplication,
                 exit: ExitApplication);
 
@@ -141,6 +152,21 @@ public partial class App : Application
         var panel = new DesktopPanelWindow(Panel, Settings);
         Current.MainWindow = panel;
         panel.Show();
+    }
+
+    /// <summary>托盘菜单"归档记录"：打开可撤销列表。</summary>
+    private static void OpenHistoryFromTray()
+    {
+        var owner = Current.MainWindow is { IsVisible: true } ? Current.MainWindow : null;
+        var window = new History.ArchiveHistoryWindow(Panel);
+
+        if (owner is not null)
+        {
+            window.Owner = owner;
+        }
+
+        window.ShowDialog();
+        Panel.RefreshAll();
     }
 
     /// <summary>托盘菜单"设置…"：面板开着就以它为 owner，否则独立弹。</summary>

@@ -450,6 +450,14 @@ public partial class DesktopPanelWindow : Window
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettingsWindow();
 
+    /// <summary>归档记录：查看每条归档的来源，并可把文件放回原位置。</summary>
+    private void OpenHistory_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new DeskFlow.App.History.ArchiveHistoryWindow(_viewModel) { Owner = this };
+        window.ShowDialog();
+        _viewModel.RefreshAll();
+    }
+
     private void OpenBatch_Click(object sender, RoutedEventArgs e) => OpenBatchWindow();
 
     private void OpenSettingsWindow()

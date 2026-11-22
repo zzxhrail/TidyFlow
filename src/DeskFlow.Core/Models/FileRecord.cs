@@ -6,6 +6,9 @@ public enum ArchiveStatus
     Archived = 1,
     Ignored = 2,
     Failed = 3,
+
+    /// <summary>已撤销归档：文件被放回原位置。</summary>
+    Reverted = 4,
 }
 
 /// <summary>一条文件记录：来源、归类、落盘位置、状态。面板与索引都读它。</summary>
@@ -37,6 +40,9 @@ public sealed class FileRecord
 
     public string? Hash { get; set; }
 
+    /// <summary>撤销归档后文件实际落回的位置（原位置被占用时会改名）。</summary>
+    public string? RestoredPath { get; set; }
+
     public string DisplayPath => ArchivedPath ?? SourcePath;
 
     public string Extension => Path.GetExtension(FileName).ToLowerInvariant();
@@ -46,6 +52,7 @@ public sealed class FileRecord
         ArchiveStatus.Archived => "已归档",
         ArchiveStatus.Ignored => "已忽略",
         ArchiveStatus.Failed => "失败",
+        ArchiveStatus.Reverted => "已撤销",
         _ => "待接收",
     };
 }

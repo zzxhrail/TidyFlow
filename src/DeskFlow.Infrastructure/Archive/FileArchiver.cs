@@ -75,6 +75,64 @@ public sealed class FileArchiver
         }
     }
 
+    /// <summary>
+    /// 撤销归档：把文件从归档目录搬回原位置。
+    /// 原位置已被别的文件占用时，退回"名字 (2).ext"，并记在 RestoredPath 上，不覆盖任何东西。
+    /// </summary>
+    public async Task<ArchiveOutcome> UndoAsync(FileRecord record, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(record.ArchivedPath) || !File.Exists(record.ArchivedPath))
+            {
+                record.Status = ArchiveStatus.Failed;
+                record.Error = "归档文件已不在原处，无法撤销";
+                return ArchiveOutcome.Failed(record, record.Error);
+            }
+
+            var target = record.SourcePath;
+            var directory = Path.GetDirectoryName(target);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                record.Status = ArchiveStatus.Failed;
+                record.Error = "原位置无效";
+                return ArchiveOutcome.Failed(record, record.Error);
+            }
+
+            Directory.CreateDirectory(directory);
+
+            if (File.Exists(target))
+            {
+                target = NextFreePath(directory, record.FileName);
+            }
+
+            await Task.Run(() =>
+            {
+                if (Path.GetPathRoot(target)!.Equals(Path.GetPathRoot(record.ArchivedPath), StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Move(record.ArchivedPath!, target);
+                }
+                else
+                {
+                    File.Copy(record.ArchivedPath!, target);
+                    File.Delete(record.ArchivedPath!);
+                }
+            }, cancellationToken).ConfigureAwait(false);
+
+            record.RestoredPath = target;
+            record.ArchivedPath = null;
+            record.Status = ArchiveStatus.Reverted;
+            record.Error = null;
+            return ArchiveOutcome.Ok(record);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            record.Status = ArchiveStatus.Failed;
+            record.Error = ex.Message;
+            return ArchiveOutcome.Failed(record, ex.Message);
+        }
+    }
+
     public static string SanitizeFolderName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();

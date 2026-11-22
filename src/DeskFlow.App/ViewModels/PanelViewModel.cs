@@ -23,6 +23,7 @@ public sealed class PanelViewModel : ObservableObject
     private readonly JsonArchiveIndex _index;
     private readonly CategoryCatalog _categories;
     private readonly FileArchiver _archiver;
+    private readonly DeskFlow.Infrastructure.History.ArchiveLog _archiveLog = new();
     private IncomingWatcher? _watcher;
     private GlobalFileWatcher? _globalWatcher;
     private string _status = "就绪";
@@ -381,6 +382,7 @@ public sealed class PanelViewModel : ObservableObject
             }
             else if (outcome.Success)
             {
+                _archiveLog.Archive(record.FileName, record.Category, "全局监听", record.SourcePath, record.ArchivedPath ?? string.Empty);
                 ToastService.Show($"已归档到「{record.Category}」", $"{info.Name}（原位置已移走）", record.ArchivedPath);
                 Log($"全局：{info.Name} → {record.Category}");
             }
@@ -521,6 +523,12 @@ public sealed class PanelViewModel : ObservableObject
         });
 
         _index.Upsert(outcome.Record);
+
+        if (outcome.Success)
+        {
+            _archiveLog.Archive(record.FileName, record.Category, record.Source.DisplayName(), record.SourcePath, record.ArchivedPath ?? string.Empty);
+        }
+
         Log(outcome.Success ? $"已归档 {record.FileName} → {record.Category}" : $"归档失败 {record.FileName}: {outcome.Error}");
         BuildRecent();
         BuildPending();
@@ -671,6 +679,12 @@ public sealed class PanelViewModel : ObservableObject
         void Apply()
         {
             _index.Upsert(outcome.Record);
+
+            if (outcome.Success)
+            {
+                _archiveLog.Archive(record.FileName, record.Category, record.Source.DisplayName(), record.SourcePath, record.ArchivedPath ?? string.Empty);
+            }
+
             Log(outcome.Success
                 ? $"自动归档 {record.FileName} → {record.Category}"
                 : $"归档失败 {record.FileName}: {outcome.Error}");
@@ -807,6 +821,47 @@ public sealed class PanelViewModel : ObservableObject
             .ToList();
     }
 
+    /// <summary>可撤销的归档记录（归档文件还在的），按时间倒序。</summary>
+    public IReadOnlyList<FileRecord> GetUndoableRecords(string? keyword = null)
+    {
+        var records = _index.All
+            .Where(static r => r.Status == ArchiveStatus.Archived && !string.IsNullOrWhiteSpace(r.ArchivedPath) && File.Exists(r.ArchivedPath))
+            .OrderByDescending(static r => r.ArchivedAt ?? r.DetectedAt);
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            records = records
+                .Where(r => r.FileName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                            (r.Category ?? string.Empty).Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(static r => r.ArchivedAt ?? r.DetectedAt);
+        }
+
+        return records.ToList();
+    }
+
+    /// <summary>撤销归档：文件搬回原位置，写日志，刷新面板列表。</summary>
+    public async Task<bool> UndoAsync(FileRecord record)
+    {
+        var from = record.ArchivedPath ?? string.Empty;
+        var outcome = await _archiver.UndoAsync(record);
+        _index.Upsert(outcome.Record);
+
+        if (!outcome.Success)
+        {
+            Log($"撤销失败 {record.FileName}: {outcome.Error}");
+            ToastService.Show("撤销失败", $"{record.FileName}：{outcome.Error}", record.SourcePath);
+            return false;
+        }
+
+        _archiveLog.Undo(record.FileName, record.Category, record.Source.DisplayName(), from, record.RestoredPath ?? record.SourcePath);
+        Log($"已撤销归档 {record.FileName} → {record.RestoredPath}");
+        ToastService.Show("已撤销归档", $"{record.FileName} 已放回 {Path.GetDirectoryName(record.RestoredPath)}", record.RestoredPath);
+
+        BuildRecent();
+        BuildCategories();
+        return true;
+    }
+
     /// <summary>手动归档：自动监听没接住时，用户自己选文件进来（走同一套分类/判重）。</summary>
     public async Task<int> ImportFilesAsync(IEnumerable<string> paths)
     {
@@ -839,6 +894,7 @@ public sealed class PanelViewModel : ObservableObject
             if (outcome.Success)
             {
                 archived++;
+                _archiveLog.Archive(record.FileName, record.Category, "手动添加", record.SourcePath, record.ArchivedPath ?? string.Empty);
                 Log($"手动归档 {record.FileName} → {record.Category}");
             }
         }

@@ -23,6 +23,7 @@ public sealed class TrayIconService : IDisposable
         ArchiveSettings settings,
         Action showPanel,
         Action openSettings,
+        Action openHistory,
         Action restart,
         Action exit)
     {
@@ -35,6 +36,7 @@ public sealed class TrayIconService : IDisposable
         menu.Items.Add(openItem);
         menu.Items.Add(new ToolStripSeparator());
 
+        menu.Items.Add(new ToolStripMenuItem("归档记录 · 可撤销…", null, (_, _) => OnUi(openHistory)));
         menu.Items.Add(new ToolStripMenuItem("设置…", null, (_, _) => OnUi(openSettings)));
         menu.Items.Add(BuildAutoDownloadMenu());
         menu.Items.Add(new ToolStripSeparator());
