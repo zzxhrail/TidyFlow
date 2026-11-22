@@ -1043,3 +1043,15 @@ DwmExtendFrameIntoClientArea(hwnd, -1,-1,-1,-1);             // 边框延伸进�
 实现方式：主题画刷全部改成 `DynamicResource`，切换时替换 `Application.Resources` 里的画刷实例 → **已经打开的窗口立刻变色**，不用重启。云母（Mica）的深色开关也跟着主题走。
 
 保存键：`ui.theme` = `System` / `Dark` / `Light`。
+
+
+## 下载（最新发布）
+
+**[TidyFlow 0.9.26](https://github.com/zzxhrail/TidyFlow/releases/tag/v0.9.26)**
+
+| 文件 | 用途 |
+| --- | --- |
+| `TidyFlow-Setup-0.9.26.exe` | **安装版**：双击安装，可选安装目录 / 开机自启 / 创建快捷方式；也支持 `--install --silent` 静默安装 |
+| `TidyFlow-0.9.26-portable.exe` | **免安装版**：单文件绿色版，双击即用，配置在 `%LOCALAPPDATA%\DeskFlow` |
+
+两者都是 66.7 MB 的自包含单文件，目标机器无需安装 .NET 运行时。
