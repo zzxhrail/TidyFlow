@@ -366,3 +366,9 @@ powershell -File build\pack.ps1                # 单文件 EXE → dist\（约 5
 ![文本预览](docs/screenshot-preview-text.png)
 
 命令行也能直接预览：`TidyFlow.exe --preview <文件路径>`（方便做成「用 TidyFlow 预览」的右键菜单项）。
+
+### 默认窗口尺寸
+
+首次打开是 **960 × 800**（窗口比例约 6:5），正好放下「左侧导航 + 右侧内容」两栏；窗口可自由拉伸，位置和尺寸会记住。
+
+老版本存下来的窗口偏窄（宽度 < 800）会**一次性**迁移到新默认值，之后你手动拖过的尺寸不会再被覆盖；迁移标记写在 settings.json 的 panel.layout.v2。

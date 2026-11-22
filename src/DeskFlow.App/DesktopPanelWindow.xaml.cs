@@ -127,16 +127,34 @@ public partial class DesktopPanelWindow : Window
         MaxHeight = _maxPanelHeight;
         MaxWidth = Math.Max(320, area.Width - 24);
 
-        var width = _settings.PanelWidth > 0 ? _settings.PanelWidth : 376;
+        // 默认尺寸：960×800（两栏布局：左侧导航 140 + 右侧内容），窗口比例接近 6:5
+        const double defaultWidth = 960;
+        const double defaultHeight = 800;
+
+        var savedWidth = _settings.PanelWidth;
+        var savedHeight = _settings.PanelHeight;
+
+        // 老版本存下来的窗口偏窄（< 800），一次性按新默认迁移；用户自己拉大过的不动
+        if (!_settings.PanelLayoutMigrated && savedWidth < 800)
+        {
+            savedWidth = defaultWidth;
+            savedHeight = defaultHeight;
+            _settings.PanelWidth = defaultWidth;
+            _settings.PanelHeight = defaultHeight;
+            _settings.PanelLayoutMigrated = true;
+            _settings.Save();
+        }
+
+        var width = savedWidth > 0 ? savedWidth : defaultWidth;
         Width = Math.Clamp(width, MinWidth, MaxWidth);
 
-        if (_settings.PanelHeight > 0)
+        if (savedHeight > 0)
         {
-            Height = Math.Clamp(_settings.PanelHeight, MinHeight, _maxPanelHeight);
+            Height = Math.Clamp(savedHeight, MinHeight, _maxPanelHeight);
         }
         else
         {
-            ApplyAutoHeight();
+            Height = Math.Clamp(defaultHeight, MinHeight, _maxPanelHeight);
         }
 
         _expandedHeight = Height;
