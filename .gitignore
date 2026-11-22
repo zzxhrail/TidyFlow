@@ -1,0 +1,17 @@
+# 构建产物
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+.idea/
+
+# 本地临时夹具与输出
+.tmp/
+samples/output/
+
+# 发布临时文件
+publish/
+*.pdb
+*.log
