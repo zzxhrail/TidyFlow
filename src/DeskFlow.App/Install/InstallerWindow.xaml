@@ -5,10 +5,7 @@
         WindowStartupLocation="CenterScreen"
         FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="13" TextOptions.TextFormattingMode="Display">
     <Window.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
-            <GradientStop Color="#1C1F28" Offset="0" />
-            <GradientStop Color="#12141A" Offset="1" />
-        </LinearGradientBrush>
+        <SolidColorBrush Color="#FF202020" />
     </Window.Background>
 
     <Grid>
@@ -19,16 +16,16 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部品牌条 -->
-        <Border Grid.Row="0" Background="#181A1F" Padding="22,16">
+        <Border Grid.Row="0" Background="Transparent" Padding="24,20,24,14">
             <StackPanel Orientation="Horizontal">
-                <Border Width="34" Height="34" CornerRadius="8" Background="#2F6BFF">
+                <Border Width="36" Height="36" CornerRadius="8" Background="{StaticResource AccentBrush}">
                     <TextBlock Text="D" Foreground="White" FontWeight="Bold" FontSize="18"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="DeskFlow 安装程序" Foreground="#FFFFFF" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock Text="DeskFlow 安装程序" Foreground="{StaticResource TextPrimaryBrush}" FontSize="20" FontWeight="SemiBold" />
                     <TextBlock x:Name="VersionText" Text="版本 0.6.0 · 仅安装到当前用户，无需管理员权限"
-                               Foreground="#9AA0A6" FontSize="11.5" />
+                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -68,13 +65,13 @@
                            Text="安装过程会：复制程序到上面这个目录 → 建快捷方式 → 写入「设置 → 应用」里的卸载项。" />
 
                 <ProgressBar x:Name="Progress" Height="6" Minimum="0" Maximum="100" Margin="0,16,0,0"
-                             Foreground="#2F6BFF" Background="#22FFFFFF" BorderThickness="0" Visibility="Collapsed" />
+                             Foreground="{StaticResource AccentBrush}" Background="#0FFFFFFF" BorderThickness="0" Visibility="Collapsed" />
                 <TextBlock x:Name="StatusText" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>
 
         <!-- 底部按钮 -->
-        <Border Grid.Row="2" Background="#0FFFFFFF" BorderBrush="#26FFFFFF" BorderThickness="0,1,0,0" Padding="22,12">
+        <Border Grid.Row="2" Background="Transparent" BorderBrush="#12FFFFFF" BorderThickness="0,1,0,0" Padding="24,14">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left" x:Name="FooterHint" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11.5"
                            VerticalAlignment="Center" Text="关闭窗口即取消安装" />

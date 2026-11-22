@@ -19,12 +19,13 @@
 
             <Style x:Key="Hint" TargetType="TextBlock" BasedOn="{StaticResource Caption}" />
 
+            <!-- Win11 设置分组标题 -->
             <Style x:Key="SectionHeader" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Margin" Value="2,16,0,6" />
-                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
+                <Setter Property="Margin" Value="2,18,0,8" />
+                <Setter Property="FontFamily" Value="{StaticResource FluentFont}" />
             </Style>
 
             <!-- 面板上的图标格子：玻璃底 + 悬停高亮 -->
@@ -39,17 +40,17 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12"
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4"
                                     BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassBrush}" />
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#12FFFFFF" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
+                                    <Setter TargetName="Bd" Property="Background" Value="#0AFFFFFF" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -62,23 +63,23 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Width" Value="26" />
-                <Setter Property="Height" Value="26" />
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
                 <Setter Property="MinWidth" Value="0" />
                 <Setter Property="Margin" Value="2,0,0,0" />
                 <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Focusable" Value="False" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF" />
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource GlassHoverBrush}" />
                                     <Setter Property="Foreground" Value="White" />
                                 </Trigger>
                             </ControlTemplate.Triggers>

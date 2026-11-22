@@ -4,8 +4,8 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="DeskFlow 面板" Width="376" Height="640" MinWidth="280" MinHeight="180"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="True" Topmost="False"
-        Background="Transparent"
-        FontFamily="Microsoft YaHei UI, Segoe UI" TextOptions.TextFormattingMode="Display">
+        Background="#FF202020"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" TextOptions.TextFormattingMode="Display">
 
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0"
@@ -13,12 +13,8 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <!-- 面板底色：接近不透明的深色，有没有云母都清晰；上部略亮一点做层次 -->
-        <LinearGradientBrush x:Key="PanelTint" StartPoint="0,0" EndPoint="0.4,1">
-            <GradientStop Color="#F21E2129" Offset="0" />
-            <GradientStop Color="#F2181A21" Offset="0.5" />
-            <GradientStop Color="#F214161C" Offset="1" />
-        </LinearGradientBrush>
+        <!-- Win11：窗口底就是 LayerBase，卡片靠 1px 描边分层，不用渐变 -->
+        <SolidColorBrush x:Key="PanelTint" Color="#FF202020" />
 
         <DataTemplate x:Key="TileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
@@ -43,17 +39,17 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Border x:Name="Root" CornerRadius="16" Background="{StaticResource PanelTint}"
-            BorderBrush="#33FFFFFF" BorderThickness="1" Margin="10"
+    <Border x:Name="Root" CornerRadius="8" Background="{StaticResource PanelTint}"
+            BorderBrush="#1AFFFFFF" BorderThickness="1" Margin="8"
             MouseLeftButtonDown="Root_MouseDown">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.35" Color="#000000" />
+            <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.28" Color="#000000" />
         </Border.Effect>
 
         <Grid>
             <ScrollViewer x:Name="BodyScroller" VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled" Padding="0" Margin="0,2,0,0">
-                <StackPanel Margin="14,12,14,14">
+                <StackPanel Margin="16,14,16,16">
 
                     <!-- 标题栏 -->
                     <Grid>
@@ -63,17 +59,17 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Width="26" Height="26" CornerRadius="8" Background="{StaticResource AccentGradient}"
+                        <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6" Background="{StaticResource AccentBrush}"
                                 VerticalAlignment="Center">
-                            <TextBlock Text="D" Foreground="White" FontSize="14" FontWeight="Bold"
+                            <TextBlock Text="D" Foreground="#FF000000" FontSize="15" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="DeskFlow" Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="14" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextTertiaryBrush}"
-                                       FontSize="10.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                       FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
@@ -90,8 +86,8 @@
                     <StackPanel x:Name="Body" Visibility="{Binding IsHome, Converter={StaticResource BoolToVisibility}}">
 
                         <!-- 来源开关 -->
-                        <Border CornerRadius="12" Background="#16FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"
-                                Padding="10,8" Margin="0,14,0,0">
+                        <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
+                                Padding="14,12" Margin="0,16,0,0">
                             <ItemsControl ItemsSource="{Binding Sources}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -140,10 +136,10 @@
                         <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource TileTemplate}"
                                       ItemsPanel="{StaticResource TilePanel}" />
 
-                        <Border CornerRadius="10" Background="#12FFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
-                                Padding="10,8" Margin="0,14,0,0">
-                            <TextBlock Text="{Binding LogText}" Foreground="{StaticResource TextTertiaryBrush}"
-                                       FontSize="10" TextWrapping="Wrap" />
+                        <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
+                                Padding="14,12" Margin="0,16,0,0">
+                            <TextBlock Text="{Binding LogText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="12" TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
 

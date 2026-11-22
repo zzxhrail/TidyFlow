@@ -5,10 +5,7 @@
         WindowStartupLocation="CenterScreen"
         FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="13" TextOptions.TextFormattingMode="Display">
     <Window.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
-            <GradientStop Color="#1C1F28" Offset="0" />
-            <GradientStop Color="#12141A" Offset="1" />
-        </LinearGradientBrush>
+        <SolidColorBrush Color="#FF202020" />
     </Window.Background>
 
     <Grid>
@@ -18,15 +15,15 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#181A1F" Padding="22,16">
+        <Border Grid.Row="0" Background="Transparent" Padding="24,20,24,14">
             <StackPanel Orientation="Horizontal">
-                <Border Width="34" Height="34" CornerRadius="8" Background="#E5484D">
+                <Border Width="36" Height="36" CornerRadius="8" Background="#FFCA3A3E">
                     <TextBlock Text="×" Foreground="White" FontWeight="Bold" FontSize="18"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="卸载 DeskFlow" Foreground="#FFFFFF" FontSize="17" FontWeight="SemiBold" />
-                    <TextBlock x:Name="SubtitleText" Text="仅移除程序本身" Foreground="#9AA0A6" FontSize="11.5" />
+                    <TextBlock Text="卸载 DeskFlow" Foreground="{StaticResource TextPrimaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SubtitleText" Text="仅移除程序本身" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -45,11 +42,11 @@
                        Foreground="{StaticResource TextSecondaryBrush}" FontSize="11.5" Margin="2,6,0,0" TextWrapping="Wrap" />
 
             <ProgressBar x:Name="Progress" Height="6" Minimum="0" Maximum="100" Margin="0,18,0,0"
-                         Foreground="#E5484D" Background="#22FFFFFF" BorderThickness="0" Visibility="Collapsed" />
+                         Foreground="{StaticResource DangerBrush}" Background="#0FFFFFFF" BorderThickness="0" Visibility="Collapsed" />
             <TextBlock x:Name="StatusText" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
-        <Border Grid.Row="2" Background="#0FFFFFFF" BorderBrush="#26FFFFFF" BorderThickness="0,1,0,0" Padding="22,12">
+        <Border Grid.Row="2" Background="Transparent" BorderBrush="#12FFFFFF" BorderThickness="0,1,0,0" Padding="24,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="CancelButton" Content="取消" Click="Cancel_Click" Padding="18,7" Margin="0,0,8,0" Style="{StaticResource SecondaryButton}" />
                 <Button x:Name="UninstallButton" Content="卸载" Click="Uninstall_Click" Padding="22,7"
