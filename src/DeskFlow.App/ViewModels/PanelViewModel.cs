@@ -78,6 +78,121 @@ public sealed class PanelViewModel : ObservableObject
 
     public bool HasRecent { get; private set; }
 
+    private int _columns = 4;
+    private double _tileWidth = 70;
+    private double _tileHeight = 88;
+    private double _iconSize = 30;
+    private double _tileFontSize = 10.5;
+    private double _titleFontSize = 9;
+    private bool _showSubtitle = true;
+
+    /// <summary>每行格子数，由面板宽度算出（2–8 列）。</summary>
+    public int Columns
+    {
+        get => _columns;
+        private set => SetProperty(ref _columns, value);
+    }
+
+    public double TileWidth
+    {
+        get => _tileWidth;
+        private set => SetProperty(ref _tileWidth, value);
+    }
+
+    public double TileHeight
+    {
+        get => _tileHeight;
+        private set => SetProperty(ref _tileHeight, value);
+    }
+
+    public double IconSize
+    {
+        get => _iconSize;
+        private set => SetProperty(ref _iconSize, value);
+    }
+
+    public double TileFontSize
+    {
+        get => _tileFontSize;
+        private set => SetProperty(ref _tileFontSize, value);
+    }
+
+    public double SubtitleFontSize
+    {
+        get => _titleFontSize;
+        private set => SetProperty(ref _titleFontSize, value);
+    }
+
+    /// <summary>标题行高与最多两行的高度，保证不同字号下都不会压到副标题。</summary>
+    private double _lineHeight = 13;
+    private double _maxTitleHeight = 27;
+
+    public double TileLineHeight => _lineHeight;
+
+    public double TitleMaxHeight => _maxTitleHeight;
+
+    public bool ShowSubtitle
+    {
+        get => _showSubtitle;
+        private set => SetProperty(ref _showSubtitle, value);
+    }
+
+    /// <summary>
+    /// 面板密度自适应：宽度变了就重算列数、格子尺寸、字号。
+    /// 窄了最少 2 列（还看得清文件名），宽了最多 8 列（再宽就不好扫视了）。
+    /// </summary>
+    public void ApplyPanelWidth(double panelWidth)
+    {
+        if (double.IsNaN(panelWidth) || panelWidth <= 0)
+        {
+            return;
+        }
+
+        const double horizontalPadding = 44;   // 窗口内边距 + 边框 + 格子间距
+        const double minTileWidth = 80;
+        var usable = Math.Max(160, panelWidth - horizontalPadding);
+        var columns = Math.Clamp((int)Math.Floor(usable / minTileWidth), 2, 8);
+        var tileWidth = Math.Max(64, Math.Floor(usable / columns) - 4);
+        var scale = Math.Clamp(tileWidth / 70.0, 0.8, 1.6);
+
+        var iconSize = Math.Round(30 * Math.Clamp(scale, 0.85, 1.6), 1);
+        var titleFont = Math.Round(10.5 * Math.Clamp(scale, 0.9, 1.35), 1);
+        var subtitleFont = Math.Round(9 * Math.Clamp(scale, 0.9, 1.2), 1);
+        var showSubtitle = tileWidth >= 82;
+        var lineHeight = Math.Round(titleFont * 1.35, 1);
+        var subtitleLine = Math.Round(subtitleFont * 1.35, 1);
+
+        // 高度 = 图标 + 间距 + 两行标题 + 副标题，全部按真实字号算，避免文字被切
+        var tileHeight = Math.Round(iconSize + 9 + (lineHeight * 2) + (showSubtitle ? subtitleLine + 3 : 2), 1);
+
+        var changed = columns != _columns
+            || Math.Abs(tileWidth - _tileWidth) > 1
+            || Math.Abs(iconSize - _iconSize) > 0.5;
+        if (!changed)
+        {
+            return;
+        }
+
+        Columns = columns;
+        TileWidth = tileWidth;
+        TileHeight = tileHeight;
+        IconSize = iconSize;
+        TileFontSize = titleFont;
+        SubtitleFontSize = subtitleFont;
+        ShowSubtitle = showSubtitle;
+        _lineHeight = lineHeight;
+        _maxTitleHeight = Math.Round(lineHeight * 2 + 1, 1);
+        OnPropertyChanged(nameof(TileLineHeight));
+        OnPropertyChanged(nameof(TitleMaxHeight));
+
+        // 尺寸变了就按新尺寸重建四个列表（几十个格子，成本可忽略，行为最可预测）
+        Diagnostics.Log($"width={panelWidth:F1} usable={usable:F1} columns={columns} tile={tileWidth:F1} icon={iconSize:F1} height={tileHeight:F1} scale={scale:F2}");
+        BuildShortcuts();
+        BuildPending();
+        BuildRecent();
+        BuildCategories();
+    }
+
     public ObservableCollection<string> Logs { get; } = new();
 
     public string LogText => string.Join(Environment.NewLine, Logs.TakeLast(3));
@@ -337,6 +452,58 @@ public sealed class PanelViewModel : ObservableObject
         }
     }
 
+    /// <summary>按当前密度参数造一个格子，四个列表共用，避免每处都手写尺寸。</summary>
+    private PanelTile MakeTile(TileKind kind, string title, string subtitle, System.Windows.Media.ImageSource? icon, string? path = null, string? recordId = null) =>
+        new()
+        {
+            Title = title,
+            Subtitle = subtitle,
+            Icon = icon,
+            Path = path,
+            Kind = kind,
+            RecordId = recordId,
+            BoxWidth = TileWidth,
+            BoxHeight = TileHeight,
+            IconSize = IconSize,
+            TitleFontSize = TileFontSize,
+            SubtitleFontSize = SubtitleFontSize,
+            LineHeight = _lineHeight,
+            MaxTitleHeight = _maxTitleHeight,
+            ShowSubtitle = ShowSubtitle && !string.IsNullOrEmpty(subtitle),
+            TitleText = FitText(title, TileWidth - 2, TileFontSize, 2),
+            SubtitleText = FitText(subtitle, TileWidth - 2, SubtitleFontSize, 1),
+        };
+
+    /// <summary>
+    /// 按格子宽度裁字：中日韩字符按 1 个字号宽计，ASCII 按 0.56 个字号宽计，
+    /// 超出预算就截断加省略号。比依赖 TextTrimming 更可控 —— 换 DPI、换字体都不会出现半个字。
+    /// </summary>
+    private static string FitText(string text, double width, double fontSize, int maxLines)
+    {
+        if (string.IsNullOrEmpty(text) || width <= 0 || fontSize <= 0)
+        {
+            return text;
+        }
+
+        var budget = Math.Max(2, (int)Math.Floor(width / fontSize * maxLines));
+        var used = 0.0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            used += IsWide(text[i]) ? 1.0 : 0.56;
+            if (used > budget)
+            {
+                return text[..Math.Max(1, i - 1)].TrimEnd() + "…";
+            }
+        }
+
+        return text;
+    }
+
+    private static bool IsWide(char c) =>
+        c >= 0x1100 && (c <= 0x115F || (c >= 0x2E80 && c <= 0xA4CF) || (c >= 0xAC00 && c <= 0xD7A3)
+        || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFE30 && c <= 0xFE4F) || (c >= 0xFF00 && c <= 0xFF60)
+        || (c >= 0xFFE0 && c <= 0xFFE6));
+
     private void BuildSourceToggles()
     {
         Sources.Clear();
@@ -361,38 +528,32 @@ public sealed class PanelViewModel : ObservableObject
                 continue;
             }
 
-            Shortcuts.Add(new PanelTile
-            {
-                Title = item.Name,
-                Subtitle = item.IsFolder ? "文件夹" : "应用",
-                Icon = ShellIconProvider.ForPath(item.Path),
-                Path = item.Path,
-                Kind = item.IsFolder ? TileKind.Category : TileKind.Shortcut,
-            });
+            Shortcuts.Add(MakeTile(
+                item.IsFolder ? TileKind.Category : TileKind.Shortcut,
+                item.Name,
+                item.IsFolder ? "文件夹" : "应用",
+                ShellIconProvider.ForPath(item.Path),
+                item.Path));
         }
 
-        Shortcuts.Add(new PanelTile
-        {
-            Title = "添加",
-            Subtitle = "快捷方式",
-            Icon = ShellIconProvider.ForFolder(Environment.GetFolderPath(Environment.SpecialFolder.Windows)),
-            Kind = TileKind.Add,
-        });
-
-        if (Shortcuts.Count <= 1)
+        if (Shortcuts.Count == 0)
         {
             foreach (var seed in ShortcutSeeder.Seed())
             {
-                Shortcuts.Add(new PanelTile
-                {
-                    Title = seed.Name,
-                    Subtitle = seed.IsFolder ? "文件夹" : "应用",
-                    Icon = ShellIconProvider.ForPath(seed.Path),
-                    Path = seed.Path,
-                    Kind = seed.IsFolder ? TileKind.Category : TileKind.Shortcut,
-                });
+                Shortcuts.Add(MakeTile(
+                    seed.IsFolder ? TileKind.Category : TileKind.Shortcut,
+                    seed.Name,
+                    seed.IsFolder ? "文件夹" : "应用",
+                    ShellIconProvider.ForPath(seed.Path),
+                    seed.Path));
             }
         }
+
+        Shortcuts.Add(MakeTile(
+            TileKind.Add,
+            "添加",
+            "快捷方式",
+            ShellIconProvider.ForFolder(Environment.GetFolderPath(Environment.SpecialFolder.Windows))));
     }
 
     private void BuildRecent()
@@ -400,14 +561,12 @@ public sealed class PanelViewModel : ObservableObject
         RecentFiles.Clear();
         foreach (var record in _index.Recent(8))
         {
-            RecentFiles.Add(new PanelTile
-            {
-                Title = record.FileName,
-                Subtitle = $"{record.Category} · {record.Source.DisplayName()}",
-                Icon = ShellIconProvider.ForFile(record.ArchivedPath ?? record.SourcePath),
-                Path = record.DisplayPath,
-                Kind = TileKind.File,
-            });
+            RecentFiles.Add(MakeTile(
+                TileKind.File,
+                record.FileName,
+                $"{record.Category} · {record.Source.DisplayName()}",
+                ShellIconProvider.ForFile(record.ArchivedPath ?? record.SourcePath),
+                record.DisplayPath));
         }
 
         HasRecent = RecentFiles.Count > 0;
@@ -416,20 +575,16 @@ public sealed class PanelViewModel : ObservableObject
 
     private void BuildPending()
     {
-        // 待接收清空后 HasPending 需要刷新
-
         PendingFiles.Clear();
         foreach (var record in _index.Pending().Take(8))
         {
-            PendingFiles.Add(new PanelTile
-            {
-                Title = record.FileName,
-                Subtitle = $"{record.Source.DisplayName()} · 点我归档",
-                Icon = ShellIconProvider.ForFile(record.SourcePath),
-                Path = record.SourcePath,
-                Kind = TileKind.Pending,
-                RecordId = record.Id,
-            });
+            PendingFiles.Add(MakeTile(
+                TileKind.Pending,
+                record.FileName,
+                $"{record.Source.DisplayName()} · 点我归档",
+                ShellIconProvider.ForFile(record.SourcePath),
+                record.SourcePath,
+                record.Id));
         }
 
         PendingCount = _index.Pending().Count;
@@ -449,16 +604,15 @@ public sealed class PanelViewModel : ObservableObject
                 continue;
             }
 
-            Categories.Add(new PanelTile
-            {
-                Title = category.Name,
-                Subtitle = $"{count} 个",
-                Icon = ShellIconProvider.ForFolder(directory),
-                Path = directory,
-                Kind = TileKind.Category,
-            });
+            Categories.Add(MakeTile(
+                TileKind.Category,
+                category.Name,
+                $"{count} 个",
+                ShellIconProvider.ForFolder(directory),
+                directory));
         }
     }
+
 
     private void Log(string message)
     {

@@ -31,6 +31,8 @@ public sealed class ArchiveSettings
         UserCategories = _store.Get("category.user", new List<string[]>()) ?? new List<string[]>();
         PanelX = _store.Get("panel.x", -1);
         PanelY = _store.Get("panel.y", -1);
+        PanelWidth = _store.Get("panel.width", 0);
+        PanelHeight = _store.Get("panel.height", 0);
     }
 
     public string ArchiveRoot { get; set; }
@@ -50,6 +52,11 @@ public sealed class ArchiveSettings
     public double PanelX { get; set; }
 
     public double PanelY { get; set; }
+
+    /// <summary>用户拖出来的面板宽高；0 表示还没拖过，交给程序按内容自适应一次。</summary>
+    public double PanelWidth { get; set; }
+
+    public double PanelHeight { get; set; }
 
     public bool IsAutoDownload(FileSource source) =>
         AutoDownload.TryGetValue(source.Key(), out var value) && value;
@@ -83,6 +90,8 @@ public sealed class ArchiveSettings
         _store.Set("category.user", UserCategories);
         _store.Set("panel.x", PanelX);
         _store.Set("panel.y", PanelY);
+        _store.Set("panel.width", PanelWidth);
+        _store.Set("panel.height", PanelHeight);
         _store.Flush();
     }
 }
