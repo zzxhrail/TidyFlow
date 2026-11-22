@@ -16,6 +16,12 @@ public partial class SettingsWindow : Window
     private readonly PanelViewModel _viewModel;
     private readonly ArchiveSettings _settings;
 
+    /// <summary>分类规则里的一个后缀（下拉框选项）。</summary>
+    private sealed record KnownExtension(string Extension, string Category)
+    {
+        public override string ToString() => $"{Extension} — {Category}";
+    }
+
     /// <summary>全局监听的文件类型（界面上的小标签列表）。</summary>
     private readonly System.Collections.ObjectModel.ObservableCollection<string> _extensions = new();
 
@@ -53,6 +59,14 @@ public partial class SettingsWindow : Window
         ExtChipsControl.ItemsSource = _extensions;
         UpdateExtCount();
 
+        // 「添加类型」下拉：直接取分类规则里的全部后缀，用户不用记着该写 .pptx 还是 pptx
+        KnownExtBox.ItemsSource = App.Categories.All
+            .SelectMany(static category => category.Extensions.Select(extension => new KnownExtension(extension, category.Name)))
+            .GroupBy(static item => item.Extension, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .OrderBy(static item => item.Extension, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         var roots = _settings.GlobalRoots.Count > 0
             ? _settings.GlobalRoots
             : DeskFlow.Infrastructure.Watch.GlobalWatchFilter.Default().Roots;
@@ -70,8 +84,20 @@ public partial class SettingsWindow : Window
     private void AddExt_Click(object sender, RoutedEventArgs e)
     {
         var raw = NewExtBox.Text ?? string.Empty;
+        var added = AddExtensions(NormalizeExtensions(raw.Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)));
+        NewExtBox.Text = string.Empty;
+
+        if (added == 0 && raw.Trim().Length > 0)
+        {
+            StatusTextPanel("这个类型已经在列表里了");
+        }
+    }
+
+    /// <summary>把若干后缀加进列表，返回实际新增数量（已存在的跳过）。</summary>
+    private int AddExtensions(IEnumerable<string> extensions)
+    {
         var added = 0;
-        foreach (var extension in NormalizeExtensions(raw.Split([' ', ',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)))
+        foreach (var extension in extensions)
         {
             if (_extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
             {
@@ -82,12 +108,62 @@ public partial class SettingsWindow : Window
             added++;
         }
 
-        NewExtBox.Text = string.Empty;
         UpdateExtCount();
-        if (added == 0 && raw.Trim().Length > 0)
+        return added;
+    }
+
+    /// <summary>下拉里选中某个后缀 → 直接加入列表并清空选择，避免误以为"选中就完事了"。</summary>
+    private void KnownExtBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (KnownExtBox.SelectedItem is not KnownExtension known)
         {
-            StatusTextPanel("这个类型已经在列表里了");
+            return;
         }
+
+        var added = AddExtensions([known.Extension]);
+        if (added == 0)
+        {
+            StatusTextPanel(known.Extension + " 已经在列表里了");
+        }
+
+        // 保留选中项：下拉框里能看到"刚选的是什么"，再次选择同一项不会重复添加
+    }
+
+    /// <summary>「按分类添加」：弹一个分类菜单，点哪个就把该分类下所有后缀加进来。</summary>
+    private void AddExtensionsByCategory_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new System.Windows.Controls.ContextMenu();
+
+        foreach (var category in App.Categories.All)
+        {
+            if (category.Extensions.Count == 0)
+            {
+                continue;
+            }
+
+            var item = new System.Windows.Controls.MenuItem
+            {
+                Header = $"{category.Name}（{category.Extensions.Count} 种）",
+            };
+
+            var extensions = category.Extensions.ToList();
+            item.Click += (_, _) =>
+            {
+                var added = AddExtensions(extensions);
+                StatusTextPanel(added == 0 ? $"{category.Name} 的后缀都已在列表里" : $"已加入 {category.Name} 的 {added} 种后缀");
+            };
+
+            menu.Items.Add(item);
+        }
+
+        if (menu.Items.Count == 0)
+        {
+            StatusTextPanel("分类规则里还没有可用的后缀");
+            return;
+        }
+
+        menu.PlacementTarget = sender as System.Windows.UIElement;
+        menu.IsOpen = true;
     }
 
     private void RemoveExt_Click(object sender, RoutedEventArgs e)

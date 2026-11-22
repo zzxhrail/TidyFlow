@@ -107,7 +107,7 @@
                     <TextBox x:Name="CategoryNameBox" Width="140" Padding="6,4" />
                     <TextBlock Text="扩展名" VerticalAlignment="Center" Margin="12,0,6,0" />
                     <TextBox x:Name="CategoryExtBox" Width="260" Padding="6,4" Text=".log .bak" />
-                    <Button Content="添加/覆盖" Click="AddCategory_Click" Margin="10,0,0,0" />
+                    <Button Content="添加/覆盖" Click="AddExtensionsByCategory_Click" Margin="10,0,0,0" />
                     <Button Content="删除选中" Click="RemoveCategory_Click" />
                 </StackPanel>
 
@@ -171,9 +171,15 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBlock Text="添加类型" VerticalAlignment="Center" Margin="0,0,6,0" />
-                        <TextBox x:Name="NewExtBox" Width="150" Padding="6,4"
+                        <TextBox x:Name="NewExtBox" Width="120" Padding="6,4"
                                  ToolTip="如 .psd 或 psd；可一次粘贴多个（空格/逗号分隔）" />
                         <Button Content="添加" Click="AddExt_Click" Margin="8,0,0,0" />
+                        <TextBlock Text="从分类选" VerticalAlignment="Center" Margin="12,0,4,0" Foreground="#5A6472" />
+                        <ComboBox x:Name="KnownExtBox" Width="190" Margin="0,0,0,0" Padding="6,3"
+                                  ToolTip="从分类规则里挑（选中即添加）"
+                                  SelectionChanged="KnownExtBox_SelectionChanged" />
+                        <Button Content="按分类添加 ▾" Click="AddCategory_Click" Margin="8,0,0,0"
+                                ToolTip="把某个分类下的所有后缀一次性加进来" />
                         <Button Content="恢复默认" Click="ResetExt_Click" />
                     </StackPanel>
                 </StackPanel>
