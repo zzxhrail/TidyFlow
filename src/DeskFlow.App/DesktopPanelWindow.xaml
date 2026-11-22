@@ -17,7 +17,7 @@
         <SolidColorBrush x:Key="PanelTint" Color="#FF202020" />
 
         <DataTemplate x:Key="TileTemplate">
-            <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
+            <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseDoubleClick="Tile_DoubleClick" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
                     MouseEnter="Tile_MouseEnter" MouseLeave="Tile_MouseLeave"
                     HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">

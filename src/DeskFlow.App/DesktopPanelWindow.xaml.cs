@@ -479,13 +479,41 @@ public partial class DesktopPanelWindow : Window
             case TileKind.Settings:
                 OpenSettingsWindow();
                 break;
-            default:
-                if (!ShellLauncher.Open(tile.Path))
-                {
-                    MessageBox.Show($"打不开：{tile.Path}", "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-
+            case TileKind.Shortcut:
+            case TileKind.Category:
+                // 应用 / 文件夹快捷方式：双击才启动，单击不动作（与资源管理器一致）
                 break;
+            default:
+                LaunchTile(tile);
+                break;
+        }
+    }
+
+    /// <summary>双击瓦片：应用 / 文件夹快捷方式在这里启动。</summary>
+    private void Tile_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not PanelTile tile)
+        {
+            return;
+        }
+
+        if (tile.Kind is TileKind.Shortcut or TileKind.Category)
+        {
+            e.Handled = true;
+            LaunchTile(tile);
+        }
+    }
+
+    private void LaunchTile(PanelTile tile)
+    {
+        if (string.IsNullOrWhiteSpace(tile.Path))
+        {
+            return;
+        }
+
+        if (!ShellLauncher.Open(tile.Path))
+        {
+            MessageBox.Show(this, "打不开：" + tile.Path, "TidyFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
