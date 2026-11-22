@@ -18,7 +18,9 @@ public sealed class IncomingWatcher : IDisposable
 
     public IncomingWatcher(IEnumerable<WatchTarget> targets, TimeSpan? interval = null)
     {
-        _targets.AddRange(targets.Where(static t => t.Exists));
+        // 不按"现在是否存在"过滤：客户端可能还没收到过文件，目录之后才创建，
+        // 每轮扫描时 Enumerate 会自然跳过不存在的目录。
+        _targets.AddRange(targets);
         _interval = interval ?? TimeSpan.FromSeconds(2);
     }
 
@@ -104,7 +106,7 @@ public sealed class IncomingWatcher : IDisposable
             {
                 foreach (var file in Enumerate(target.Directory))
                 {
-                    if (_known.Contains(file))
+                    if (_known.Contains(file) || IsNoise(file, target.Directory))
                     {
                         continue;
                     }
@@ -139,6 +141,32 @@ public sealed class IncomingWatcher : IDisposable
 
     private IEnumerable<string> EnumerateAll() => _targets.SelectMany(t => Enumerate(t.Directory)).ToList();
 
+    private static readonly HashSet<string> NoiseSegments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Thumb", "ThumbTemp", "Emoji", "emoji", "log", "logs", "cache", "Cache", "temp", "Temp",
+        "nt_temp", "nt_db", "db", "db_storage", "resource_cache", "crash", "crashinfo", "dumps",
+    };
+
+    /// <summary>
+    /// 聊天工具目录里混着缩略图、表情、日志、数据库缓存，这些不算"收到的文件"，
+    /// 否则面板会被一堆 .db/.thumb 刷屏。
+    /// </summary>
+    public static bool IsNoise(string fullPath, string root)
+    {
+        var relative = Path.GetRelativePath(root, fullPath);
+        var segments = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        // 最后一段是文件名，不参与判断
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (NoiseSegments.Contains(segments[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static IEnumerable<string> Enumerate(string directory)
     {
         if (!Directory.Exists(directory))
@@ -151,7 +179,7 @@ public sealed class IncomingWatcher : IDisposable
             RecurseSubdirectories = true,
             IgnoreInaccessible = true,
             AttributesToSkip = FileAttributes.System | FileAttributes.Hidden | FileAttributes.Temporary,
-            MaxRecursionDepth = 3,
+            MaxRecursionDepth = 4,
         };
 
         try

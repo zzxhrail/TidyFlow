@@ -328,7 +328,7 @@ public sealed class PanelViewModel : ObservableObject
     public IReadOnlyList<WatchTarget> BuildTargets()
     {
         var list = new List<WatchTarget>();
-        list.AddRange(SourceDirectoryResolver.Discover());
+        list.AddRange(SourceDirectoryResolver.Discover(cachedRoots: _settings.DiscoveryRoots));
         foreach (var extra in _settings.ExtraTargets)
         {
             if (Directory.Exists(extra.Path))
@@ -507,15 +507,52 @@ public sealed class PanelViewModel : ObservableObject
     private void BuildSourceToggles()
     {
         Sources.Clear();
-        var targets = SourceDirectoryResolver.Discover();
+        var targets = BuildTargets();
         foreach (var source in new[] { FileSource.Qq, FileSource.WeChat, FileSource.DingTalk, FileSource.Downloads })
         {
             var matched = targets.Where(t => t.Source == source).ToList();
-            var detail = matched.Count == 0
-                ? "未检测到目录"
-                : matched.Count == 1 ? matched[0].Directory : $"{matched.Count} 个目录";
+            var detected = matched.Count(t => t.IsDetected);
+
+            var detail = detected > 0
+                ? (detected == 1 ? "已检测到目录" : $"已检测到 {detected} 个目录")
+                : matched.Count > 0
+                    ? "等待首次接收"
+                    : "未检测到（可在设置里手动添加）";
+
             Sources.Add(new SourceToggle(source.DisplayName(), detail, source.ToString(), matched.Count > 0, _settings.IsAutoDownload(source)));
         }
+    }
+
+    /// <summary>兜底扫描盘符找数据目录，结果缓存进配置，然后重启监听。</summary>
+    public async Task<string> ScanForDataRootsAsync()
+    {
+        var found = await Task.Run(() => DriveScanner.Scan(3));
+        var added = 0;
+        foreach (var path in found)
+        {
+            var parent = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(parent))
+            {
+                continue;
+            }
+
+            if (!_settings.DiscoveryRoots.Contains(parent, StringComparer.OrdinalIgnoreCase))
+            {
+                _settings.DiscoveryRoots.Add(parent);
+                added++;
+            }
+        }
+
+        if (added > 0)
+        {
+            _settings.Save();
+        }
+
+        BuildSourceToggles();
+        StartWatching();
+        RefreshAll();
+        Log(added == 0 ? "扫描完成，没有发现新的数据目录" : $"扫描完成，新增 {added} 个数据根目录");
+        return added == 0 ? "没有发现新的客户端数据目录" : $"新增 {added} 个数据根目录";
     }
 
     private void BuildShortcuts()

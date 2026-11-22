@@ -352,6 +352,58 @@ Console.WriteLine("[12] PanelHitTest");
     Check("零尺寸不崩", PanelHitTest.Hit(10, 10, 0, 0, false) == PanelHitArea.None);
 }
 
+
+// ---------- 13. 目录探测（重定向文档目录 / 客户端各版本布局） ----------
+Console.WriteLine("[13] SourceDirectoryResolver");
+{
+    var profile = NewTempDir();
+    var docs = Path.Combine(profile, "docu");          // 模拟"文档"被重定向到别的盘
+    Directory.CreateDirectory(docs);
+
+    // QQNT 9.x
+    var qqFile = Path.Combine(docs, "Tencent Files", "123456", "nt_qq", "nt_data", "File");
+    Directory.CreateDirectory(qqFile);
+    // 微信 4.x
+    var wx4 = Path.Combine(docs, "xwechat_files", "wxid_abc_1234", "msg", "file", "2026-11");
+    Directory.CreateDirectory(wx4);
+    // 微信 3.x
+    var wx3 = Path.Combine(docs, "WeChat Files", "wxid_old", "FileStorage", "File");
+    Directory.CreateDirectory(wx3);
+    // 钉钉
+    var dt = Path.Combine(docs, "DingTalk", "rail_123", "file");
+    Directory.CreateDirectory(dt);
+    Directory.CreateDirectory(Path.Combine(profile, "Downloads"));
+
+    var appData = Path.Combine(profile, "appdata");
+    Directory.CreateDirectory(appData);
+    var targets = SourceDirectoryResolver.Discover(userProfile: profile, documentsRoot: docs, appDataRoot: appData);
+    var qq = targets.FirstOrDefault(t => t.Source == FileSource.Qq);
+    Check("重定向文档目录下的 QQNT 被识别", qq is not null && qq.Directory == qqFile, qq?.Directory);
+    Check("微信 4.x 被识别", targets.Any(t => t.Source == FileSource.WeChat && t.Directory.EndsWith(Path.Combine("msg", "file"), StringComparison.Ordinal)));
+    Check("微信 3.x 被识别", targets.Any(t => t.Source == FileSource.WeChat && t.Directory.EndsWith(Path.Combine("FileStorage", "File"), StringComparison.Ordinal)));
+    Check("钉钉被识别", targets.Any(t => t.Source == FileSource.DingTalk && t.Directory == dt));
+    Check("下载目录被识别", targets.Any(t => t.Source == FileSource.Downloads));
+    Check("同一目录不重复", targets.Select(t => t.Directory).Distinct(StringComparer.OrdinalIgnoreCase).Count() == targets.Count);
+
+    // 未安装/未收过文件：给出预测路径且 IsDetected=false，界面显示"等待首次接收"
+    var emptyProfile = NewTempDir();
+    var emptyDocs = Path.Combine(emptyProfile, "docu");
+    Directory.CreateDirectory(emptyDocs);
+    Directory.CreateDirectory(Path.Combine(emptyDocs, "DingTalk"));
+    var emptyAppData = Path.Combine(emptyProfile, "appdata");
+    Directory.CreateDirectory(Path.Combine(emptyAppData, "DingTalk"));
+    var predicted = SourceDirectoryResolver.Discover(userProfile: emptyProfile, documentsRoot: emptyDocs, appDataRoot: emptyAppData);
+    var dtPredicted = predicted.FirstOrDefault(t => t.Source == FileSource.DingTalk);
+    Check("钉钉未收过文件时给预测路径", dtPredicted is not null && !dtPredicted.IsDetected, dtPredicted?.Directory);
+
+    // QQ 缓存目录（Thumb/Emoji/log）不算收到的文件
+    var thumb = Path.Combine(qqFile, "Thumb", "abc.jpg");
+    var realFile = Path.Combine(qqFile, "FileRecv", "报告.docx");
+    Check("Thumb 被判定为噪声", IncomingWatcher.IsNoise(thumb, qqFile));
+    Check("FileRecv 不算噪声", !IncomingWatcher.IsNoise(realFile, qqFile));
+    Check("日志目录被判定为噪声", IncomingWatcher.IsNoise(Path.Combine(qqFile, "log", "a.log"), qqFile));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0
     ? $"全部通过：{checks} 项检查"

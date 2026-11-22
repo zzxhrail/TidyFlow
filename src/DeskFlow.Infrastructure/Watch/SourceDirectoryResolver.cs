@@ -3,47 +3,58 @@ using DeskFlow.Core.Models;
 namespace DeskFlow.Infrastructure.Watch;
 
 /// <summary>
-/// 探测 QQ / 微信 / 钉钉 / 下载目录的收文件路径。
-/// 聊天工具不提供稳定的文件回调，业界做法就是盯它们的落盘目录 —— 换版本只改这里的候选路径。
+/// 探测 QQ / 微信 / 钉钉 / 下载目录的收文件位置。
+///
+/// 关键点（踩过的坑）：
+/// 1. **不能用 %USERPROFILE%\Documents** —— 用户把"文档"重定向到 D:\docu 之后那里什么都没有。
+///    必须用 Environment.SpecialFolder.MyDocuments，它才跟着重定向走。
+/// 2. QQNT 9.x 的落盘位置是 &lt;账号&gt;\nt_qq\nt_data\File（收文件在 File\FileRecv），
+///    旧版才是 &lt;账号&gt;\FileRecv；两套都探测。
+/// 3. 微信 4.x 是 &lt;wxid&gt;\msg\file\YYYY-MM；3.x 是 &lt;wxid&gt;\FileStorage\File。
+/// 4. 目录可能"还没被创建"（客户端没收到过文件），这时按预测路径给出 target，
+///    监听器会在目录出现后自动生效，界面上显示"等待首次接收"。
 /// </summary>
 public static class SourceDirectoryResolver
 {
-    public static IReadOnlyList<WatchTarget> Discover(string? userProfile = null)
+    public static IReadOnlyList<WatchTarget> Discover(
+        string? userProfile = null,
+        string? documentsRoot = null,
+        IEnumerable<string>? cachedRoots = null,
+        string? appDataRoot = null)
     {
+        var appData = appDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var profile = userProfile ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var documents = Path.Combine(profile, "Documents");
+        var documents = documentsRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var targets = new List<WatchTarget>();
 
-        // QQ：Documents\Tencent Files\<QQ号>\FileRecv
-        foreach (var account in SafeDirectories(documents, "Tencent Files"))
+        // 文档目录可能是空串（极端环境），退回 profile\Documents
+        if (string.IsNullOrWhiteSpace(documents))
         {
-            Add(targets, "QQ 接收文件", Path.Combine(account, "FileRecv"), FileSource.Qq);
+            documents = Path.Combine(profile, "Documents");
         }
 
-        // 微信 3.x：Documents\WeChat Files\<wxid>\FileStorage\File
-        foreach (var account in SafeDirectories(documents, "WeChat Files"))
+        var dataRoots = new List<string> { documents };
+        var fallbackDocuments = Path.Combine(profile, "Documents");
+        if (!string.Equals(fallbackDocuments, documents, StringComparison.OrdinalIgnoreCase))
         {
-            Add(targets, "微信接收文件", Path.Combine(account, "FileStorage", "File"), FileSource.WeChat);
+            dataRoots.Add(fallbackDocuments);
         }
 
-        // 微信 4.x：Documents\xwechat_files\<wxid>\msg\file
-        foreach (var account in SafeDirectories(documents, "xwechat_files"))
+        if (cachedRoots is not null)
         {
-            Add(targets, "微信接收文件(4.x)", Path.Combine(account, "msg", "file"), FileSource.WeChat);
-            Add(targets, "微信接收文件(4.x)", Path.Combine(account, "msg", "attach"), FileSource.WeChat);
+            dataRoots.AddRange(cachedRoots.Where(static r => !string.IsNullOrWhiteSpace(r)));
         }
 
-        // 钉钉：Documents\DingTalk\<user>\file 与 %USERPROFILE%\DingTalk\files
-        foreach (var account in SafeDirectories(documents, "DingTalk"))
+        foreach (var root in dataRoots.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            Add(targets, "钉钉接收文件", Path.Combine(account, "file"), FileSource.DingTalk);
-            Add(targets, "钉钉接收文件", account, FileSource.DingTalk);
+            AddQq(targets, root);
+            AddWeChat(targets, root);
+            AddDingTalk(targets, root);
         }
 
-        Add(targets, "钉钉接收文件", Path.Combine(profile, "DingTalk", "files"), FileSource.DingTalk);
-
-        // 浏览器/手动下载
-        Add(targets, "下载目录", Path.Combine(profile, "Downloads"), FileSource.Downloads);
+        AddDingTalk(targets, Path.Combine(profile, "DingTalk"));
+        AddDingTalkPrediction(targets, documents, appData);
+        AddDownloads(targets, profile);
 
         return targets
             .GroupBy(static t => t.Directory, StringComparer.OrdinalIgnoreCase)
@@ -51,28 +62,157 @@ public static class SourceDirectoryResolver
             .ToList();
     }
 
-    private static void Add(List<WatchTarget> targets, string name, string directory, FileSource source)
+    private static void AddQq(List<WatchTarget> targets, string root)
     {
-        if (!Directory.Exists(directory))
+        var tencentFiles = Path.Combine(root, "Tencent Files");
+        if (!Directory.Exists(tencentFiles))
         {
             return;
         }
 
-        targets.Add(new WatchTarget(name, directory, source, IsDetected: true));
+        foreach (var account in SafeDirectories(tencentFiles))
+        {
+            // 有些机器会多一层 Tencent Files\Tencent Files\<账号>
+            var accountName = Path.GetFileName(account);
+            if (string.Equals(accountName, "Tencent Files", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var inner in SafeDirectories(account))
+                {
+                    AddQqAccount(targets, inner);
+                }
+
+                continue;
+            }
+
+            AddQqAccount(targets, account);
+        }
     }
 
-    private static IEnumerable<string> SafeDirectories(string parent, string child)
+    private static void AddQqAccount(List<WatchTarget> targets, string account)
     {
-        var root = Path.Combine(parent, child);
+        // QQNT 9.x：nt_qq\nt_data\File（收文件在 File\FileRecv，缓存 Thumb 会被监听器过滤）
+        var ntFile = Path.Combine(account, "nt_qq", "nt_data", "File");
+        if (Directory.Exists(ntFile))
+        {
+            targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntFile, FileSource.Qq, IsDetected: true));
+            return;
+        }
+
+        // 旧版 QQ：<账号>\FileRecv
+        var legacy = Path.Combine(account, "FileRecv");
+        if (Directory.Exists(legacy))
+        {
+            targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", legacy, FileSource.Qq, IsDetected: true));
+            return;
+        }
+
+        // 账号目录在、但还没收过文件：给 QQNT 的预测路径，目录出现即生效
+        targets.Add(new WatchTarget($"QQ 接收文件（{Path.GetFileName(account)}）", ntFile, FileSource.Qq, IsDetected: false));
+    }
+
+    private static void AddWeChat(List<WatchTarget> targets, string root)
+    {
+        // 微信 4.x：xwechat_files\<wxid>\msg\file
+        foreach (var account in SafeDirectories(Path.Combine(root, "xwechat_files")))
+        {
+            var file = Path.Combine(account, "msg", "file");
+            targets.Add(new WatchTarget(
+                $"微信接收文件（{ShortName(account)}）",
+                file,
+                FileSource.WeChat,
+                IsDetected: Directory.Exists(file)));
+        }
+
+        // 微信 3.x：WeChat Files\<wxid>\FileStorage\File
+        foreach (var account in SafeDirectories(Path.Combine(root, "WeChat Files")))
+        {
+            var file = Path.Combine(account, "FileStorage", "File");
+            targets.Add(new WatchTarget(
+                $"微信接收文件（{ShortName(account)}）",
+                file,
+                FileSource.WeChat,
+                IsDetected: Directory.Exists(file)));
+        }
+    }
+
+    private static void AddDingTalk(List<WatchTarget> targets, string root)
+    {
+        if (!Directory.Exists(root))
+        {
+            return;
+        }
+
+        // 传进来的既可能是文档根（需要再进一层 DingTalk），也可能已经是 DingTalk 根
+        var dingRoot = string.Equals(Path.GetFileName(root), "DingTalk", StringComparison.OrdinalIgnoreCase)
+            ? root
+            : Path.Combine(root, "DingTalk");
+
+        if (!Directory.Exists(dingRoot))
+        {
+            return;
+        }
+
+        // 钉钉：DingTalk\<用户名>\file
+        var accounts = SafeDirectories(dingRoot).ToList();
+        foreach (var account in accounts)
+        {
+            var file = Path.Combine(account, "file");
+            targets.Add(new WatchTarget(
+                $"钉钉接收文件（{ShortName(account)}）",
+                file,
+                FileSource.DingTalk,
+                IsDetected: Directory.Exists(file)));
+        }
+
+        // 没有账号子目录时：老版本可能直接把文件放在 DingTalk 根下（预测路径，等待创建）
+        if (accounts.Count == 0)
+        {
+            targets.Add(new WatchTarget("钉钉接收文件", dingRoot, FileSource.DingTalk, IsDetected: false));
+        }
+    }
+
+    /// <summary>
+    /// 钉钉装了但还没收过文件时，目录不会存在。此时按它的默认位置给出预测目标，
+    /// 监听器每轮都会重试，目录一被创建（第一次收文件）就开始工作。
+    /// 判定"装了"用 %APPDATA%\DingTalk 是否存在，避免误判。
+    /// </summary>
+    private static void AddDingTalkPrediction(List<WatchTarget> targets, string documents, string appData)
+    {
+        var installed = Directory.Exists(Path.Combine(appData, "DingTalk")) || Directory.Exists(Path.Combine(appData, "dinglive"));
+        if (!installed)
+        {
+            return;
+        }
+
+        var dingRoot = Path.Combine(documents, "DingTalk");
+        if (!Directory.Exists(dingRoot))
+        {
+            targets.Add(new WatchTarget("钉钉接收文件（等待首次接收）", dingRoot, FileSource.DingTalk, IsDetected: false));
+        }
+    }
+
+    private static void AddDownloads(List<WatchTarget> targets, string profile)
+    {
+        var downloads = Path.Combine(profile, "Downloads");
+        if (Directory.Exists(downloads))
+        {
+            targets.Add(new WatchTarget("下载目录", downloads, FileSource.Downloads, IsDetected: true));
+        }
+    }
+
+    private static string ShortName(string directory)
+    {
+        var name = Path.GetFileName(directory);
+        return name.Length <= 12 ? name : name[..12] + "…";
+    }
+
+    private static IEnumerable<string> SafeDirectories(string parent)
+    {
         try
         {
-            return Directory.Exists(root) ? Directory.GetDirectories(root) : [];
+            return Directory.Exists(parent) ? Directory.GetDirectories(parent) : [];
         }
-        catch (IOException)
-        {
-            return [];
-        }
-        catch (UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return [];
         }

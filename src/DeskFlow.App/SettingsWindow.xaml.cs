@@ -92,6 +92,23 @@ public partial class SettingsWindow : Window
         RefreshWatchList();
     }
 
+    private async void AutoScan_Click(object sender, RoutedEventArgs e)
+    {
+        AutoScanButton.IsEnabled = false;
+        AutoScanButton.Content = "扫描中…";
+        try
+        {
+            var message = await _viewModel.ScanForDataRootsAsync();
+            RefreshWatchList();
+            MessageBox.Show(message, "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        finally
+        {
+            AutoScanButton.Content = "自动查找数据目录…";
+            AutoScanButton.IsEnabled = true;
+        }
+    }
+
     private void BrowseArchiveRoot_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "选择归档根目录" };

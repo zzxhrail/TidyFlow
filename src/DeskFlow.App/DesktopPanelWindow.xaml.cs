@@ -44,6 +44,7 @@ public partial class DesktopPanelWindow : Window
 
     private bool _collapsed;
     private bool _pinned;
+    private double _heightBeforeMinimize;
     private double _expandedHeight = 640;
     private double _maxPanelHeight = 640;
 
@@ -73,6 +74,36 @@ public partial class DesktopPanelWindow : Window
         base.OnSourceInitialized(e);
         var handle = new WindowInteropHelper(this).Handle;
         HwndSource.FromHwnd(handle)?.AddHook(WndProc);
+        RoundedCorners.Apply(handle);
+    }
+
+    /// <summary>
+    /// 最小化后还原时，WPF 偶尔不重绘（历史 bug：还原后窗口一片空白）。
+    /// 这里显式恢复尺寸并强制整树重绘，同时避免把 0 尺寸写进配置。
+    /// </summary>
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+
+        if (WindowState == WindowState.Minimized)
+        {
+            _heightBeforeMinimize = Height;
+            return;
+        }
+
+        if (WindowState == WindowState.Normal && _heightBeforeMinimize > 0)
+        {
+            Height = Math.Clamp(_heightBeforeMinimize, MinHeight, _maxPanelHeight);
+            var width = ActualWidth;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _viewModel.ApplyPanelWidth(width);
+                InvalidateVisual();
+                Root.InvalidateVisual();
+                BodyScroller.InvalidateMeasure();
+                UpdateLayout();
+            }), DispatcherPriority.Loaded);
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -107,6 +138,11 @@ public partial class DesktopPanelWindow : Window
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        if (WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
         _viewModel.ApplyPanelWidth(ActualWidth);
         if (!_collapsed)
         {
@@ -140,6 +176,11 @@ public partial class DesktopPanelWindow : Window
 
     private void PersistGeometry()
     {
+        if (WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
         _settings.PanelX = Left;
         _settings.PanelY = Top;
         _settings.PanelWidth = Width;

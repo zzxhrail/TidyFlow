@@ -34,6 +34,7 @@ public sealed class ArchiveSettings
         PanelWidth = _store.Get("panel.width", 0);
         PanelHeight = _store.Get("panel.height", 0);
         PanelPinned = _store.Get("panel.pinned", false);
+        DiscoveryRoots = _store.Get("discovery.roots", new List<string>()) ?? new List<string>();
     }
 
     public string ArchiveRoot { get; set; }
@@ -61,6 +62,9 @@ public sealed class ArchiveSettings
 
     /// <summary>是否"顶住"：顶住后面板不能被拖动（位置锁死），但点按交互照常。</summary>
     public bool PanelPinned { get; set; }
+
+    /// <summary>兜底扫描找到的客户端数据根目录（深盘、改过保存路径的情况）。</summary>
+    public List<string> DiscoveryRoots { get; set; }
 
     public bool IsAutoDownload(FileSource source) =>
         AutoDownload.TryGetValue(source.Key(), out var value) && value;
@@ -97,6 +101,7 @@ public sealed class ArchiveSettings
         _store.Set("panel.width", PanelWidth);
         _store.Set("panel.height", PanelHeight);
         _store.Set("panel.pinned", PanelPinned);
+        _store.Set("discovery.roots", DiscoveryRoots);
         _store.Flush();
     }
 }
