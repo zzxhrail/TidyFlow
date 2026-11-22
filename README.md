@@ -978,3 +978,15 @@ CollapsedBar.Measure(宽度, 无穷高) → 内容高 + 上下留白 ≈ 99 DIP
 ![最矮状态](docs/screenshot-collapsed-min.png)
 
 截图是最小高度（132 px ≈ 88 DIP）：一排图标完整显示、无切图。
+
+
+## 0.9.23：收起条图标再放大 + 整块可点
+
+| 项 | 之前 | 现在 |
+| --- | --- | --- |
+| 收起条图标 | 32 / 26 DIP | **40 / 34 DIP**（主面板格子不动） |
+| 瓦片宽度 | 60 | **74** |
+| 点击范围 | 只有图标像素 | **整块瓦片**（`Background=Transparent` 撑满，图标周边留白也能点） |
+| 最小高度 | 88 DIP | **104 DIP**（一排 34 DIP 图标刚好放下） |
+
+![最矮状态](docs/screenshot-collapsed-min.png)
