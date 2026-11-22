@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     把 DeskFlow 打包成绿色单文件 EXE。
 
