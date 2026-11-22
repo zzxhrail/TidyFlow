@@ -32,6 +32,44 @@ public partial class App : Application
     /// <summary>系统托盘（面板收起来后程序继续在这里）。</summary>
     public static TrayIconService? Tray { get; private set; }
 
+    /// <summary>命令行试分类：只打印判定结果与依据，不动文件。</summary>
+    private static bool ClassifyFromCommandLine(string target)
+    {
+        try
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+        }
+        catch (IOException)
+        {
+        }
+
+        var classifier = new Infrastructure.Analysis.KeywordContentClassifier();
+        var catalog = new Core.Categorization.CategoryCatalog();
+        var files = File.Exists(target)
+            ? [target]
+            : Directory.Exists(target) ? Directory.GetFiles(target, "*", SearchOption.TopDirectoryOnly) : [];
+
+        if (files.Length == 0)
+        {
+            Console.WriteLine("没找到文件：" + target);
+            return false;
+        }
+
+        foreach (var file in files)
+        {
+            var name = Path.GetFileName(file);
+            var byContent = classifier.Classify(file, name);
+            var byExtension = catalog.Resolve(name).Name;
+
+            var line = byContent is null
+                ? $"{name} → {byExtension}（扩展名规则；内容判不准）"
+                : $"{name} → {byContent.Category}（内容识别 {byContent.Score} 分：{byContent.Reason}）";
+            Console.WriteLine(line);
+        }
+
+        return true;
+    }
+
     /// <summary>命令行归档：读完设置后按同一套规则（含内容分类）归档，输出结果。</summary>
     private static int ImportFromCommandLine(string target)
     {
@@ -187,6 +225,14 @@ public partial class App : Application
                     .Select(static c => new CategoryDefinition(c[0], c.Skip(1))));
             Index = new JsonArchiveIndex();
             Panel = new PanelViewModel(Settings, Index, Categories);
+
+            // --classify <文件或目录>：只看内容分类结果，不归档（调参/验证用）
+            var classifyIndex = Array.FindIndex(e.Args, static x => x.Equals("--classify", StringComparison.OrdinalIgnoreCase));
+            if (classifyIndex >= 0 && classifyIndex + 1 < e.Args.Length)
+            {
+                Shutdown(ClassifyFromCommandLine(e.Args[classifyIndex + 1]) ? 0 : 1);
+                return;
+            }
 
             // --scan：直接打开扫描磁盘窗口
             if (e.Args.Any(static x => x.Equals("--scan", StringComparison.OrdinalIgnoreCase)))

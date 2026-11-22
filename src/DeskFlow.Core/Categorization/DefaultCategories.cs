@@ -10,8 +10,14 @@ public static class DefaultCategories
     public static IReadOnlyList<CategoryDefinition> Create() =>
     [
         new("办公文档",
-            [".doc", ".docx", ".xls", ".xlsx", ".xlsm", ".ppt", ".pptx", ".pdf", ".txt", ".md", ".rtf", ".csv", ".one", ".vsdx"],
+            [".doc", ".docx", ".pdf", ".txt", ".md", ".rtf", ".one", ".vsdx"],
             isBuiltIn: true, glyph: "\uE8A5"),
+        new("表格",
+            [".xls", ".xlsx", ".xlsm", ".csv", ".tsv"],
+            isBuiltIn: true, glyph: "\uE9F9"),
+        new("演示文稿",
+            [".ppt", ".pptx", ".pps", ".ppsx", ".key"],
+            isBuiltIn: true, glyph: "\uE8A1"),
         new("代码",
             [".cs", ".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".hpp", ".json", ".xml",
              ".yml", ".yaml", ".sql", ".ps1", ".bat", ".cmd", ".sh", ".html", ".css", ".vue", ".sln", ".csproj", ".ipynb"],

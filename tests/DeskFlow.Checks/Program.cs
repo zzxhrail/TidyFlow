@@ -679,6 +679,94 @@ Console.WriteLine("[20] FileScanner");
     Check("排除目录生效（自身没文件，不影响结果）", excluded.Count == all.Count);
 }
 
+
+// ---------- 20.5 扩展名映射 ----------
+Console.WriteLine("[20.5] Extension mapping");
+{
+    var catalog = new CategoryCatalog();
+    Check("xlsx → 表格", catalog.Resolve("预算.xlsx").Name == "表格", catalog.Resolve("预算.xlsx").Name);
+    Check("pptx → 演示文稿", catalog.Resolve("汇报.pptx").Name == "演示文稿", catalog.Resolve("汇报.pptx").Name);
+    Check("docx → 办公文档", catalog.Resolve("周报.docx").Name == "办公文档", catalog.Resolve("周报.docx").Name);
+}
+
+// ---------- 21. 内容分类准确率 ----------
+Console.WriteLine("[21] Classifier accuracy");
+{
+    var root = NewTempDir();
+    var classifier = new DeskFlow.Infrastructure.Analysis.KeywordContentClassifier();
+
+    string Office(string name, string folder, string entryName, string body)
+    {
+        var path = Path.Combine(root, name);
+        using var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create);
+        var entry = zip.CreateEntry(entryName);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write($"<?xml version=\"1.0\"?><root><t>{body}</t></root>");
+        return path;
+    }
+
+    async Task<string> Text(string name, string body)
+    {
+        var path = Path.Combine(root, name);
+        await File.WriteAllTextAsync(path, body);
+        return path;
+    }
+
+    var cases = new List<(string Path, string? Expected, string Label)>
+    {
+        (Office("a.docx", "word/", "word/document.xml",
+            "增值税专用发票 开票日期 2026-11-20 价税合计 1130.00 纳税人识别号 91500000 销售方 甲公司 购买方 乙公司"), "发票", "发票 docx"),
+        (await Text("b.txt", "电子发票 发票代码 044031900111 发票号码 12345678 税额 130.00"), "发票", "发票 txt"),
+        (Office("c.docx", "word/", "word/document.xml",
+            "劳动合同 甲方 某某科技有限公司 乙方 张三 违约责任 本协议一式两份 甲方签字 盖章"), "合同", "合同 docx"),
+        (await Text("d.txt", "租赁协议 出租方 王五 承租方 李四 违约责任 合同编号 A-2026-01"), "合同", "合同 txt"),
+        (Office("e.docx", "word/", "word/document.xml",
+            "个人简历 求职意向 后端开发 教育经历 某某大学 工作经历 三年 项目经验 若干 技能特长 C#"), "简历", "简历 docx"),
+        (await Text("f.txt", "resume curriculum vitae 教育经历 工作经历 自我评价"), "简历", "简历 txt"),
+        (Office("g.docx", "word/", "word/document.xml",
+            "会议纪要 会议时间 2026-11-20 参会人员 张三 李四 议题 预算 决议 通过"), "会议纪要", "会议纪要"),
+        (Office("h.docx", "word/", "word/document.xml",
+            "资产负债表 利润表 应收账款 应付账款 现金流量表 毛利率"), "财务", "财务 docx"),
+        (Office("i.xlsx", "xl/", "xl/sharedStrings.xml", "预算 费用 科目 成本 合计"), "财务", "财务 xlsx"),
+        (Office("j.docx", "word/", "word/document.xml",
+            "分析报告 结论与建议 调研数据 甲方提供样本"), "报告", "报告（仅弱合同信号）"),
+        (await Text("k.txt", "using System; namespace Demo { public class Foo { } } #include <stdio.h>"), "代码", "代码"),
+        (Office("l.pptx", "ppt/", "ppt/slides/slide1.xml", "幻灯片 演示文稿 presentation 大纲视图"), "演示文稿", "演示文稿"),
+        (Office("m.docx", "word/", "word/document.xml",
+            "用户手册 安装说明 快速开始 常见问题 使用说明"), "说明书", "说明书"),
+        (Office("p.docx", "word/", "word/document.xml",
+            "教学大纲 课件 讲义 习题 实验指导 章节练习"), "学习资料", "学习资料"),
+        (Office("q.docx", "word/", "word/document.xml",
+            "特此通知 通知如下 全体师生 报名时间 截止日期"), "通知公告", "通知公告"),
+        (await Text("n.txt", "今天开会讨论了一下预算和合同的事情，随便记了两句"), null, "模糊内容（应放弃判定）"),
+        (await Text("o.txt", "hello world nothing special"), null, "无特征内容（应放弃判定）"),
+    };
+
+    var labelled = 0;
+    var correct = 0;
+
+    foreach (var (path, expected, label) in cases)
+    {
+        var result = classifier.Classify(path, Path.GetFileName(path));
+        if (expected is null)
+        {
+            Check($"放弃判定：{label}", result is null, result?.Category);
+            continue;
+        }
+
+        labelled++;
+        if (result?.Category == expected)
+        {
+            correct++;
+        }
+
+        Check($"识别 {label} → {expected}", result?.Category == expected, result?.Category ?? "null");
+    }
+
+    var accuracy = labelled == 0 ? 0 : (double)correct / labelled;
+    Check($"准确率 ≥ 90%（实测 {accuracy:P0}，{correct}/{labelled}）", accuracy >= 0.9, accuracy.ToString("P1"));
+}
+
 Console.WriteLine();
 Console.WriteLine(failures == 0
     ? $"全部通过：{checks} 项检查"

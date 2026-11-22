@@ -6,30 +6,125 @@ using DeskFlow.Core.Analysis;
 namespace DeskFlow.Infrastructure.Analysis;
 
 /// <summary>
-/// 内置的"按内容分类"：把文档内容抽成文本，再用加权关键词打分选类别。
-/// 完全离线，不联网、不依赖模型文件；判不准时返回 null，交给扩展名规则。
+/// 内置的"按内容分类"。设计原则：**宁可判不出来，也不要判错** ——
+/// 判不准就返回 null，交给扩展名规则兜底（那至少不会把合同塞进"报告"）。
+///
+/// 打分模型：
+///   1. 关键词带权重（强证据 5~7 分、中等 3~4、弱 1~2），同一词出现次数封顶 3 次；
+///   2. 文件名命中也算分（权重折半），很多人会把类型写进文件名；
+///   3. 文件类型与类别"搭不搭"给 ±分（.xlsx 不可能是简历）；
+///   4. 必须同时满足：最高分 ≥ 该类别门槛、且 ≥ 第二名 1.5 倍，否则放弃判定。
 /// </summary>
 public sealed partial class KeywordContentClassifier : IContentClassifier
 {
-    /// <summary>低于这个分数就认为证据不足，不硬猜。</summary>
-    private const int MinimumScore = 3;
-
-    /// <summary>最多读多少字节，避免大文件拖慢归档。</summary>
     private const int MaxTextBytes = 256 * 1024;
 
-    private static readonly (string Category, string[] Keywords)[] Rules =
+    private static readonly (string Category, (string Word, int Weight)[] Words, int MinScore, string[]? ForbiddenFor)[] Rules =
     [
-        ("发票", ["发票", "价税合计", "开票日期", "纳税人识别号", "增值税", "invoice", "税额", "销售方", "购买方"]),
-        ("合同", ["合同", "协议", "甲方", "乙方", "签署", "违约责任", "条款", "agreement", "contract", "party a", "party b"]),
-        ("简历", ["简历", "求职", "应聘", "教育经历", "工作经历", "项目经验", "resume", "curriculum vitae", "自我评价"]),
-        ("会议纪要", ["会议纪要", "参会人员", "议程", "会议时间", "决议", "纪要", "minutes of meeting", "attendees"]),
-        ("财务", ["预算", "决算", "资产负债表", "利润表", "应收", "应付", "成本", "费用", "budget", "cash flow"]),
-        ("报告", ["报告", "方案", "总结", "汇报", "计划", "调研", "分析报告", "report", "proposal", "summary"]),
-        ("代码", ["namespace ", "public class", "using ", "#include", "function ", "def ", "import ", "select * from", "const ", "=>"]),
-        ("演示文稿", ["presentation", "幻灯片", "议程", "slide", "演讲", "汇报材料"]),
-        ("表格数据", ["sheet", "行号", "合计", "小计", "统计", "pivot"]),
-        ("说明书", ["用户手册", "安装说明", "快速开始", "注意事项", "manual", "user guide", "getting started"]),
+        ("发票",
+            [
+                ("增值税", 6), ("价税合计", 6), ("开票日期", 6), ("纳税人识别号", 6),
+                ("发票代码", 5), ("发票号码", 5), ("销售方", 3), ("购买方", 3), ("税额", 3),
+                ("invoice", 5), ("报销单", 4), ("电子发票", 5),
+            ],
+            8,
+            [".pptx", ".xlsx"]),
+
+        ("合同",
+            [
+                ("甲方", 5), ("乙方", 5), ("违约责任", 6), ("本协议", 5), ("合同编号", 4),
+                ("签署", 2), ("条款", 2), ("协议", 2), ("出租方", 4), ("承租方", 4),
+                ("contract", 5), ("agreement", 4), ("甲方签字", 4), ("盖章", 3),
+            ],
+            9,
+            [".pptx", ".xlsx"]),
+
+        ("简历",
+            [
+                ("教育经历", 6), ("工作经历", 6), ("项目经验", 5), ("求职意向", 6),
+                ("个人简历", 6), ("应聘", 3), ("resume", 6), ("curriculum vitae", 6),
+                ("自我评价", 3), ("技能特长", 4), ("毕业院校", 4),
+            ],
+            9,
+            [".pptx", ".xlsx"]),
+
+        ("会议纪要",
+            [
+                ("会议纪要", 7), ("参会人员", 6), ("会议时间", 5), ("会议记录", 6),
+                ("议程", 3), ("决议", 4), ("议题", 3), ("attendees", 5), ("minutes", 3),
+            ],
+            9,
+            [".pptx", ".xlsx"]),
+
+        ("财务",
+            [
+                ("资产负债表", 7), ("利润表", 7), ("现金流量表", 7), ("预算", 4),
+                ("决算", 4), ("应收", 3), ("应付", 3), ("科目", 2), ("成本", 2),
+                ("费用", 2), ("budget", 4), ("cash flow", 6), ("毛利率", 4),
+            ],
+            8,
+            null),
+
+        ("报告",
+            [
+                ("分析报告", 5), ("调研报告", 5), ("工作报告", 5), ("年度报告", 5),
+                ("总结", 2), ("方案", 2), ("汇报", 3), ("report", 3), ("summary", 2),
+                ("结论与建议", 4),
+            ],
+            8,
+            [".pptx"]),
+
+        ("代码",
+            [
+                ("namespace", 5), ("public class", 5), ("#include", 5), ("function ", 4),
+                ("import ", 3), ("def ", 4), ("select * from", 5), ("console.log", 4),
+                ("</html>", 5), ("void main", 5),
+            ],
+            8,
+            [".pptx", ".xlsx", ".docx"]),
+
+        ("演示文稿",
+            [
+                ("幻灯片", 6), ("presentation", 5), ("slide", 4), ("演讲", 3),
+                ("汇报材料", 5), ("演示文稿", 6), ("大纲视图", 4),
+            ],
+            8,
+            null),
+
+        ("学习资料",
+            [
+                ("课件", 6), ("讲义", 6), ("教学大纲", 6), ("习题", 5), ("试卷", 5),
+                ("考试", 3), ("课程", 3), ("实验指导", 5), ("章节练习", 5),
+            ],
+            10,
+            null),
+
+        ("通知公告",
+            [
+                ("特此通知", 7), ("通知如下", 6), ("关于", 1), ("公告", 5),
+                ("全体师生", 5), ("请于", 3), ("报名时间", 4), ("截止日期", 4),
+            ],
+            10,
+            null),
+
+        ("说明书",
+            [
+                ("用户手册", 6), ("安装说明", 6), ("快速开始", 5), ("getting started", 5),
+                ("user guide", 5), ("manual", 4), ("使用说明", 4), ("常见问题", 3),
+            ],
+            9,
+            null),
     ];
+
+    /// <summary>扩展名与类别的"搭不搭"：搭调 +2 分；不搭调在 Rules 里直接跳过。</summary>
+    private static readonly Dictionary<string, string[]> ExtensionAffinity = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".xlsx"] = ["财务"],
+        [".xls"] = ["财务"],
+        [".csv"] = ["财务"],
+        [".pptx"] = ["演示文稿"],
+        [".ppt"] = ["演示文稿"],
+    };
 
     public ContentClassification? Classify(string path, string fileName)
     {
@@ -48,67 +143,96 @@ public sealed partial class KeywordContentClassifier : IContentClassifier
             return null;
         }
 
-        if (text.Length < 16)
+        // 正文太短（<8 字）就只看文件名；8 字以上正常参与打分（门槛分本身已经很高，不会误判）
+        var haystack = text.Length >= 8 ? text : string.Empty;
+        var nameLower = fileName.ToLowerInvariant();
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        var affinity = ExtensionAffinity.TryGetValue(extension, out var categories) ? categories : [];
+
+        var scored = new List<(string Category, int Score, List<string> Hits)>();
+
+        foreach (var (category, words, minScore, forbiddenFor) in Rules)
         {
-            return null;
-        }
-
-        // 文件名也参与打分（权重较低），避免正文抽取失败时完全靠猜
-        var nameBonus = fileName.ToLowerInvariant();
-        ContentClassification? best = null;
-
-        foreach (var (category, keywords) in Rules)
-        {
-            var score = 0;
-            var hits = new List<string>();
-
-            foreach (var keyword in keywords)
-            {
-                var count = CountOccurrences(text, keyword);
-                if (count > 0)
-                {
-                    score += Math.Min(count, 4) * 2;
-                    hits.Add(keyword);
-                }
-
-                if (nameBonus.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                {
-                    score += 3;
-                    if (!hits.Contains(keyword))
-                    {
-                        hits.Add(keyword);
-                    }
-                }
-            }
-
-            if (score < MinimumScore)
+            if (forbiddenFor is not null && forbiddenFor.Contains(extension, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            var confidence = Math.Min(0.99, score / 20.0);
-            if (best is null || score > best.Score)
+            var score = 0;
+            var hits = new List<string>();
+
+            foreach (var (word, weight) in words)
             {
-                best = new ContentClassification(category, confidence, string.Join("、", hits.Take(4)), score);
+                var count = CountOccurrences(haystack, word);
+                if (count > 0)
+                {
+                    score += weight * Math.Min(count, 3);
+                    hits.Add(word);
+                }
+
+                if (nameLower.Contains(word, StringComparison.OrdinalIgnoreCase))
+                {
+                    score += Math.Max(2, weight / 2);
+                    if (!hits.Contains(word))
+                    {
+                        hits.Add(word);
+                    }
+                }
             }
+
+            if (score == 0)
+            {
+                continue;
+            }
+
+            if (affinity.Contains(category, StringComparer.OrdinalIgnoreCase))
+            {
+                score += 2;
+            }
+
+            if (score < minScore)
+            {
+                continue;
+            }
+
+            scored.Add((category, score, hits));
         }
 
-        return best;
+        if (scored.Count == 0)
+        {
+            return null;
+        }
+
+        var ordered = scored.OrderByDescending(static s => s.Score).ToList();
+        var best = ordered[0];
+        var runnerUp = ordered.Count > 1 ? ordered[1].Score : 0;
+
+        // 两个类别咬得很紧 → 不硬猜，交回扩展名规则
+        if (runnerUp > 0 && best.Score < runnerUp * 1.5)
+        {
+            return null;
+        }
+
+        var confidence = Math.Min(0.99, (double)best.Score / (best.Score + runnerUp + 6));
+        return new ContentClassification(best.Category, confidence, string.Join("、", best.Hits.Take(4)), best.Score);
     }
 
     private static int CountOccurrences(string haystack, string needle) =>
-        string.IsNullOrEmpty(needle) ? 0 : haystack.Split(needle, StringSplitOptions.None).Length - 1;
+        string.IsNullOrEmpty(needle) || haystack.Length == 0
+            ? 0
+            : haystack.Split(needle, StringSplitOptions.None).Length - 1;
 
-    /// <summary>把不同格式抽成纯文本；抽不出来就返回空串。</summary>
+    // ---------------- 文本抽取 ----------------
+
     private static string ExtractText(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
 
         return extension switch
         {
-            ".docx" => ReadZipText(path, "word/document.xml"),
-            ".xlsx" => ReadZipText(path, "xl/sharedStrings.xml"),
-            ".pptx" => ReadZipText(path, entries: ["ppt/slides/slide1.xml", "ppt/slides/slide2.xml"]),
+            ".docx" => ReadOfficeXml(path, "word/"),
+            ".xlsx" => ReadOfficeXml(path, "xl/"),
+            ".pptx" => ReadOfficeXml(path, "ppt/"),
             ".pdf" => ReadPdfText(path),
             ".txt" or ".md" or ".log" or ".json" or ".xml" or ".csv" or ".yml" or ".yaml" or ".ini"
                 or ".cs" or ".xaml" or ".js" or ".ts" or ".py" or ".java" or ".html" or ".css" or ".sql" => ReadPlainText(path),
@@ -125,33 +249,45 @@ public sealed partial class KeywordContentClassifier : IContentClassifier
         return Encoding.UTF8.GetString(buffer);
     }
 
-    private static string ReadZipText(string path, string? entryName = null, string[]? entries = null)
+    /// <summary>
+    /// 把 Office 文档里所有相关 XML 拼起来再剥标签。
+    /// 旧版只读 document.xml / sharedStrings.xml / 前两页幻灯片，
+    /// 页眉页脚、脚注、后续幻灯片里的关键信息全漏了 —— 这是准确率低的主因之一。
+    /// </summary>
+    private static string ReadOfficeXml(string path, string folderPrefix)
     {
         using var archive = ZipFile.OpenRead(path);
         var builder = new StringBuilder();
 
-        var targets = entries ?? (entryName is null ? [] : [entryName]);
-        foreach (var target in targets)
+        foreach (var entry in archive.Entries)
         {
-            var entry = archive.GetEntry(target);
-            if (entry is null)
+            var name = entry.FullName;
+            if (!name.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase) ||
+                !name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
-            var xml = reader.ReadToEnd();
-            builder.Append(StripTags(xml));
+            builder.Append(StripTags(reader.ReadToEnd())).Append(' ');
+
             if (builder.Length > MaxTextBytes)
             {
                 break;
             }
         }
 
+        // 文档属性里的标题/主题/关键词往往就是分类线索
+        var core = archive.GetEntry("docProps/core.xml");
+        if (core is not null)
+        {
+            using var reader = new StreamReader(core.Open(), Encoding.UTF8);
+            builder.Append(' ').Append(StripTags(reader.ReadToEnd()));
+        }
+
         return builder.Length > MaxTextBytes ? builder.ToString(0, MaxTextBytes) : builder.ToString();
     }
 
-    /// <summary>PDF 没有第三方库时只能粗抽：取 BT/ET 之间的字面量，中文多半抽不到，但英文关键词够用。</summary>
     private static string ReadPdfText(string path)
     {
         var raw = ReadPlainText(path);
