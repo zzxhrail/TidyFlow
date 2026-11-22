@@ -23,7 +23,6 @@
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
                 <Grid Height="{Binding BoxHeight}" HorizontalAlignment="Stretch">
                     <CheckBox Style="{StaticResource TilePicker}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                              Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}"
                               Click="TilePicker_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-12,-2,0,0" />
                     <StackPanel Margin="0,16,0,0" ClipToBounds="True" HorizontalAlignment="Center" Width="{Binding BoxWidth}">
                         <Image Source="{Binding Icon}" HorizontalAlignment="Center"
