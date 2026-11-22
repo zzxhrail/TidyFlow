@@ -66,7 +66,7 @@ public sealed class TextPromptWindow : Window
         Content = root;
         Loaded += (_, _) =>
         {
-            Services.Animations.FadeSlideIn(root, offsetY: 6, milliseconds: 140);
+            Services.Animations.PopIn(root, 0.96, 160);
             _input.Focus();
         };
     }

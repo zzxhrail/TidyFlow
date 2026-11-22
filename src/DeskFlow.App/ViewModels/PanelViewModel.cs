@@ -108,6 +108,7 @@ public sealed class PanelViewModel : ObservableObject
         TryCreateArchiveFolder(clean);
         BuildCategories();
         RebuildNav();
+        RaiseConfirmed($"已新建分类「{clean}」");
         Log($"已新建分类「{clean}」");
         message = clean;
         return true;
@@ -172,6 +173,7 @@ public sealed class PanelViewModel : ObservableObject
         _categories.RemoveUserCategory(name);
         BuildCategories();
         RebuildNav();
+            RaiseConfirmed("已删除（回收站）");
         Log($"已删除分类规则「{name}」（磁盘上的文件没动）");
         message = name;
         return true;
@@ -775,6 +777,7 @@ public sealed class PanelViewModel : ObservableObject
             _archiveLog.Archive(record.FileName, record.Category, record.Source.DisplayName(), record.SourcePath, record.ArchivedPath ?? string.Empty);
         }
 
+        RaiseConfirmed(outcome.Success ? $"已归档到「{record.Category}」" : "归档失败", outcome.Success);
         Log(outcome.Success
             ? $"已归档 {record.FileName} → {record.Category}" + (record.CategoryReason is null ? string.Empty : $"（{record.CategoryReason}）")
             : $"归档失败 {record.FileName}: {outcome.Error}");
@@ -784,6 +787,11 @@ public sealed class PanelViewModel : ObservableObject
     }
 
     /// <summary>待接收里已勾选的文件数量。</summary>
+    /// <summary>操作完成通知（文字, 是否成功）：面板据此播放"确认动画"，不依赖日志文本。</summary>
+    public event Action<string, bool>? Confirmed;
+
+    private void RaiseConfirmed(string text, bool success = true) => Confirmed?.Invoke(text, success);
+
     public int PendingSelectedCount => PendingFiles.Count(static t => t.IsSelected);
 
     /// <summary>批量接收：挨个走和单条相同的归档流程。</summary>
@@ -819,6 +827,7 @@ public sealed class PanelViewModel : ObservableObject
         BuildPending();
         if (pending.Count > 0)
         {
+            RaiseConfirmed($"已忽略 {pending.Count} 个文件");
             Log($"已忽略 {pending.Count} 个待接收文件");
         }
 
@@ -1332,6 +1341,7 @@ public sealed class PanelViewModel : ObservableObject
         }
 
         _archiveLog.Undo(record.FileName, record.Category, record.Source.DisplayName(), from, record.RestoredPath ?? record.SourcePath);
+            RaiseConfirmed("已撤销，文件已回原位置");
         Log($"已撤销归档 {record.FileName} → {record.RestoredPath}");
         ToastService.Show("已撤销归档", $"{record.FileName} 已放回 {Path.GetDirectoryName(record.RestoredPath)}", record.RestoredPath);
 

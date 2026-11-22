@@ -54,6 +54,19 @@
              拖拽缩放和滚动都会明显掉帧（这是"整体卡顿"的主因）。窗口阴影交给 DWM。 -->
 
         <Grid>
+            <!-- 确认提示：操作完成后弹出一下（缩放 + 淡入），1.2 秒后自动消失 -->
+            <Border x:Name="ConfirmCard" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                    Margin="0,0,0,96" Padding="14,9" CornerRadius="6" Background="#F02C2C2C"
+                    BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Opacity="0"
+                    IsHitTestVisible="False" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="ConfirmGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets"
+                               FontSize="14" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ConfirmText" Margin="8,0,0,0" VerticalAlignment="Center"
+                               FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                </StackPanel>
+            </Border>
+
             <!-- 面板主体：固定高度分区，导航列随窗口高度伸展 -->
             <Grid x:Name="BodyScroller" Margin="16,14,16,16">
                 <Grid.RowDefinitions>

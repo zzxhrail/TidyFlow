@@ -72,6 +72,8 @@ public partial class DesktopPanelWindow : Window
         Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
 
         // 待接收列表变化时刷新「共 N 个，已选 M 个」与按钮状态
+        _viewModel.Confirmed += (text, success) => ShowConfirm(text, success);
+
         _viewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(PanelViewModel.PendingCount) or nameof(PanelViewModel.HasPending))
@@ -590,15 +592,48 @@ public partial class DesktopPanelWindow : Window
     }
 
     /// <summary>切换分区/分类时给内容区一个 8px 的滑入，观感更连贯（不做布局动画，只动合成层）。</summary>
-    private void AnimateContent()
+    private System.Windows.Threading.DispatcherTimer? _confirmTimer;
+
+    /// <summary>确认动画：卡片在内容区上方缩放淡入，成功是 ✓、失败是 !，1.2 秒后淡出。</summary>
+    private void ShowConfirm(string text, bool success)
+    {
+        if (ConfirmCard is null)
+        {
+            return;
+        }
+
+        ConfirmText.Text = text;
+        ConfirmGlyph.Text = success ? "\uE73E" : "\uE711";
+        ConfirmGlyph.Foreground = (System.Windows.Media.Brush)FindResource(success ? "SuccessBrush" : "DangerBrush");
+        ConfirmCard.Visibility = Visibility.Visible;
+        Animations.PopIn(ConfirmCard, 0.9, 160);
+
+        _confirmTimer?.Stop();
+        _confirmTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        _confirmTimer.Tick += (_, _) =>
+        {
+            _confirmTimer?.Stop();
+            Animations.FadeOut(ConfirmCard, 180, () => ConfirmCard.Visibility = Visibility.Collapsed);
+        };
+        _confirmTimer.Start();
+    }
+
+    private void AnimateContent(int direction = 0)
     {
         if (ContentHost is null)
         {
             return;
         }
 
-        var target = ContentHost as UIElement;
-        Animations.FadeSlideIn(target, offsetY: 8, milliseconds: 170);
+        // direction: +1 进入更深一层（从右侧滑入）、-1 返回（从左侧滑入）、0 同级切换（上浮淡入）
+        if (direction == 0)
+        {
+            Animations.FadeSlideIn(ContentHost, offsetY: 8, milliseconds: 170);
+        }
+        else
+        {
+            Animations.SlideIn(ContentHost, direction * 26, 190);
+        }
     }
 
     private void UpdatePendingSummary(string? hint = null)
@@ -940,7 +975,7 @@ public partial class DesktopPanelWindow : Window
         {
             if (tile.Kind == TileKind.Browse)
             {
-                menu.Items.Add(MenuItemFor("打开分类", () => { _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title); AnimateContent(); }));
+                menu.Items.Add(MenuItemFor("打开分类", () => { _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title); AnimateContent(1); }));
             }
             else
             {

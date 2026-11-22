@@ -20,7 +20,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $Version = '0.9.2',
+    [string] $Version = '0.9.3',
     [switch] $SkipExe,
     [switch] $Msi
 )
@@ -59,6 +59,7 @@ try {
 finally {
     Pop-Location
 }
+
 
 
 

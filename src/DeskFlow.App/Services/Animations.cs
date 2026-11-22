@@ -72,6 +72,71 @@ public static class Animations
         element.BeginAnimation(UIElement.OpacityProperty, animation, HandoffBehavior.SnapshotAndReplace);
     }
 
+    /// <summary>弹出：缩放 0.94→1 + 淡入，用于对话框 / 卡片。</summary>
+    public static void PopIn(FrameworkElement element, double fromScale = 0.94, int milliseconds = 180)
+    {
+        if (element is null)
+        {
+            return;
+        }
+
+        if (!Enabled || !SystemParameters.ClientAreaAnimation)
+        {
+            element.Opacity = 1;
+            element.RenderTransform = Transform.Identity;
+            return;
+        }
+
+        var transform = new ScaleTransform(fromScale, fromScale);
+        element.RenderTransformOrigin = new Point(0.5, 0.5);
+        element.RenderTransform = transform;
+        element.Opacity = 0;
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        element.BeginAnimation(
+            UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(milliseconds)) { EasingFunction = ease },
+            HandoffBehavior.SnapshotAndReplace);
+
+        foreach (var property in new[] { ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty })
+        {
+            transform.BeginAnimation(
+                property,
+                new DoubleAnimation(fromScale, 1, TimeSpan.FromMilliseconds(milliseconds)) { EasingFunction = ease });
+        }
+    }
+
+    /// <summary>横向滑入：进入下一层从右侧来，返回从左侧来。</summary>
+    public static void SlideIn(UIElement element, double fromX, int milliseconds = 190)
+    {
+        if (element is null)
+        {
+            return;
+        }
+
+        if (!Enabled || !SystemParameters.ClientAreaAnimation)
+        {
+            element.Opacity = 1;
+            element.RenderTransform = Transform.Identity;
+            return;
+        }
+
+        var transform = new TranslateTransform(fromX, 0);
+        element.RenderTransform = transform;
+        element.Opacity = 0;
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        element.BeginAnimation(
+            UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(milliseconds)) { EasingFunction = ease },
+            HandoffBehavior.SnapshotAndReplace);
+
+        transform.BeginAnimation(
+            TranslateTransform.XProperty,
+            new DoubleAnimation(fromX, 0, TimeSpan.FromMilliseconds(milliseconds)) { EasingFunction = ease });
+    }
+
     /// <summary>只淡入，用于局部刷新（分类列表、日志行）。</summary>
     public static void FadeIn(UIElement element, int milliseconds = 140)
     {
