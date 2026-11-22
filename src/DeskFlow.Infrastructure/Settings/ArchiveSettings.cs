@@ -39,6 +39,7 @@ public sealed class ArchiveSettings
         UnrecognizedBucket = _store.Get("archive.unrecognized-bucket", true);
         AnimationsEnabled = _store.Get("ui.animations", true);
         UserNavItems = _store.Get("nav.user", new List<ShortcutItem>());
+        PanelCollapsedHeight = _store.Get("panel.collapsed-height", 92);
         PanelPinned = _store.Get("panel.pinned", false);
         DiscoveryRoots = _store.Get("discovery.roots", new List<string>()) ?? new List<string>();
         GlobalWatchEnabled = _store.Get("watch.global.enabled", false);
@@ -86,6 +87,9 @@ public sealed class ArchiveSettings
 
     /// <summary>用户自定义的一级导航项（指向任意文件夹）。</summary>
     public List<ShortcutItem> UserNavItems { get; set; } = [];
+
+    /// <summary>收起状态的高度（用户拖拽后记住）。</summary>
+    public double PanelCollapsedHeight { get; set; } = 92;
 
     /// <summary>是否"顶住"：顶住后面板不能被拖动（位置锁死），但点按交互照常。</summary>
     public bool PanelPinned { get; set; }
@@ -140,6 +144,7 @@ public sealed class ArchiveSettings
         _store.Set("archive.unrecognized-bucket", UnrecognizedBucket);
         _store.Set("ui.animations", AnimationsEnabled);
         _store.Set("nav.user", UserNavItems);
+        _store.Set("panel.collapsed-height", PanelCollapsedHeight);
         _store.Set("panel.pinned", PanelPinned);
         _store.Set("discovery.roots", DiscoveryRoots);
         _store.Set("watch.global.enabled", GlobalWatchEnabled);

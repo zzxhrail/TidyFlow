@@ -348,7 +348,7 @@ public partial class DesktopPanelWindow : Window
         return new IntPtr(hit);
     }
 
-    private const double CollapsedHeight = 92;   // 收起条 72 + 上下边距
+    private const double CollapsedHeight = 92;   // 收起条默认高度（用户可拖拽调整，会记住）
 
     private bool _topmostBeforeCollapse;
 
@@ -434,10 +434,10 @@ public partial class DesktopPanelWindow : Window
             _expandedHeight = Height;
             _topmostBeforeCollapse = Topmost;
 
-            MinHeight = CollapsedHeight;
+            MinHeight = 60;   // 收起态允许拖拽调整高度
             BodyScroller.Visibility = Visibility.Collapsed;
             CollapsedBar.Visibility = Visibility.Visible;
-            Height = CollapsedHeight;
+            Height = Math.Max(60, _settings.PanelCollapsedHeight);
 
             // 收起后置顶，随时能点到（用户也可以再点按钮取消）
             Topmost = true;
@@ -891,7 +891,6 @@ public partial class DesktopPanelWindow : Window
         menu.Items.Add(MenuItemFor("添加导航（选文件夹）…", AddNavFromFolder));
         if (entry is { Kind: "user" })
         {
-            menu.Items.Add(new Separator());
             menu.Items.Add(MenuItemFor($"移除导航「{entry.Title}」", () =>
             {
                 _viewModel.RemoveNavItem(entry.Key);
@@ -908,7 +907,6 @@ public partial class DesktopPanelWindow : Window
             }));
         }
 
-        menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemFor("在资源管理器中打开归档目录", () =>
         {
             try
@@ -936,7 +934,6 @@ public partial class DesktopPanelWindow : Window
 
         if (entry is { Kind: "category" })
         {
-            menu.Items.Add(new Separator());
             menu.Items.Add(MenuItemFor($"重命名「{entry.Title}」…", () => RenameCategory(entry)));
             menu.Items.Add(MenuItemFor($"删除「{entry.Title}」", () => DeleteCategory(entry)));
             menu.Items.Add(MenuItemFor("打开这个分类的文件夹", () =>
@@ -1285,7 +1282,6 @@ public partial class DesktopPanelWindow : Window
             if (tile.Kind == TileKind.File && !string.IsNullOrWhiteSpace(tile.RecordId))
             {
                 var recordId = tile.RecordId;
-                menu.Items.Add(new Separator());
                 menu.Items.Add(MenuItemFor("撤销回原位置", () => _ = UndoFromPanelAsync(recordId, tile.Title)));
                 menu.Items.Add(MenuItemFor("删除（回收站）", () => DeleteFromPanel(recordId, tile.Title)));
             }
@@ -1475,12 +1471,10 @@ public partial class DesktopPanelWindow : Window
             IsEnabled = false,
             FontWeight = System.Windows.FontWeights.SemiBold,
         });
-        menu.Items.Add(new Separator());
 
         // 顺序：设置 → 归档记录 →（细线）→ 扫描磁盘
         menu.Items.Add(MenuItemFor("设置", () => OpenSettingsWindow()));
         menu.Items.Add(MenuItemFor("归档记录 · 可撤销", () => OpenHistory_Click(sender, e)));
-        menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemFor("扫描磁盘…", OpenScanInteractive));
 
         menu.PlacementTarget = sender as UIElement;

@@ -762,16 +762,10 @@
     </Style>
 
     <!-- 菜单分隔线：一条较长的细线，左右留白相等（居中） -->
+    <!-- 菜单分隔线：用户明确不要，整套去掉（保留空模板，避免别处再出现细线） -->
     <Style TargetType="Separator">
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Separator">
-                    <Border Height="1" Background="#33FFFFFF" Margin="12,6,12,6"
-                            HorizontalAlignment="Stretch" />
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Height" Value="0" />
+        <Setter Property="Visibility" Value="Collapsed" />
     </Style>
 
     <Style TargetType="ToolTip">

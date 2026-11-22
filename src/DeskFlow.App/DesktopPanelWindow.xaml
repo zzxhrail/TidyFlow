@@ -70,25 +70,27 @@
 
         <Grid>
             <!-- 收起状态：一条窄横条，横向排应用图标，双击图标启动、双击空白展开 -->
-            <Border x:Name="CollapsedBar" Visibility="Collapsed" Height="72" Margin="16,10,16,10"
-                    VerticalAlignment="Top" Background="Transparent"
+            <Border x:Name="CollapsedBar" Visibility="Collapsed" Margin="16,8,16,8"
+                    VerticalAlignment="Stretch" Background="Transparent"
                     PreviewMouseLeftButtonDown="CollapsedBar_MouseDown">
                 <DockPanel>
                     <Image DockPanel.Dock="Left" Source="Assets/icon-32.png" Width="26" Height="26"
                            VerticalAlignment="Center" Margin="0,0,10,0" />
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="CollapsedTrayButton" Style="{StaticResource IconButton}"
+                                Content="&#xE896;" ToolTip="最小化到系统托盘" Click="Exit_Click" />
                         <Button x:Name="CollapsedTopmostButton" Style="{StaticResource IconButton}"
                                 Content="&#xE840;" ToolTip="置顶（总在最前）" Click="CollapsedTopmost_Click" />
                         <Button Style="{StaticResource IconButton}" Content="&#xE922;" ToolTip="展开"
                                 Click="ToggleCollapse_Click" />
                     </StackPanel>
-                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
-                                  PanningMode="HorizontalOnly" VerticalAlignment="Center">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                  VerticalAlignment="Stretch" Margin="0,4,0,4">
                         <ItemsControl ItemsSource="{Binding CollapsedTiles}" ItemTemplate="{StaticResource CollapsedTileTemplate}"
                                       PreviewMouseLeftButtonDown="CollapsedBar_MouseDown">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
+                                    <WrapPanel Orientation="Horizontal" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
@@ -142,6 +144,8 @@
                                 ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
                         <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 扫描磁盘）" Click="OpenMoreMenu_Click" />
                         <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />
+                        <Button x:Name="HeaderTrayButton" Style="{StaticResource IconButton}" Content="&#xE896;"
+                                ToolTip="最小化到系统托盘" Click="Exit_Click" />
                         <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="收起到托盘（程序继续运行）" Click="Exit_Click" />
                     </StackPanel>
                 </Grid>

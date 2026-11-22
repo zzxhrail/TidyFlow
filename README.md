@@ -847,3 +847,12 @@ System.InvalidOperationException: Transform is not valid for Window.
 | 发布 | `dotnet publish src/DeskFlow.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o dist`，产物 `TidyFlow.exe` 上传为 artifact |
 
 这套命令与本地 `build/pack.ps1` 完全一致，本地已跑通（Release 构建 5 个警告、171 项自检全通过、单文件 exe 66.7 MB）。
+
+
+## 0.9.14 的三处调整
+
+| # | 调整 |
+| --- | --- |
+| 1 | **去掉所有菜单分隔线**：Separator 样式全局置为 0 高并隐藏，菜单项之间只用留白分隔 |
+| 2 | 收起条支持**纵向滚动**：应用图标自动换行（WrapPanel），窗口高度可以自己拖，拖完会记住（`panel.collapsed-height`） |
+| 3 | 收起条右侧新增 **最小化到系统托盘** 按钮（⤓），顶部按钮组也加了一个同名按钮 |
