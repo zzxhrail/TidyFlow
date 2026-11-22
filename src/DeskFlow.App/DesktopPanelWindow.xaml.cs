@@ -341,6 +341,9 @@ public partial class DesktopPanelWindow : Window
             case TileKind.Pending:
                 _ = _viewModel.AcceptPendingAsync(tile);
                 break;
+            case TileKind.Browse:
+                _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title);
+                break;
             case TileKind.Add:
                 AddShortcutInteractive();
                 break;
@@ -360,6 +363,34 @@ public partial class DesktopPanelWindow : Window
         }
     }
 
+    private void BrowseBack_Click(object sender, RoutedEventArgs e) => _viewModel.CloseBrowse();
+
+    private void BrowseOpenFolder_Click(object sender, RoutedEventArgs e) =>
+        ShellLauncher.RevealInExplorer(_viewModel.BrowsePath);
+
+    private void BrowseItem_Click(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is BrowseItem item)
+        {
+            ShellLauncher.Open(item.FullPath);
+        }
+    }
+
+    private void BrowseItem_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not BrowseItem item)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu();
+        menu.Items.Add(MenuItemFor("打开", () => ShellLauncher.Open(item.FullPath)));
+        menu.Items.Add(MenuItemFor("在资源管理器中显示", () => ShellLauncher.RevealInExplorer(item.FullPath)));
+        menu.PlacementTarget = sender as UIElement;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
     private void Tile_RightClick(object sender, MouseButtonEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not PanelTile tile)
@@ -375,7 +406,15 @@ public partial class DesktopPanelWindow : Window
         }
         else
         {
-            menu.Items.Add(MenuItemFor("打开", () => ShellLauncher.Open(tile.Path)));
+            if (tile.Kind == TileKind.Browse)
+            {
+                menu.Items.Add(MenuItemFor("打开分类", () => _viewModel.OpenCategory(tile.Path ?? string.Empty, tile.Title)));
+            }
+            else
+            {
+                menu.Items.Add(MenuItemFor("打开", () => ShellLauncher.Open(tile.Path)));
+            }
+
             menu.Items.Add(MenuItemFor("在资源管理器中显示", () => ShellLauncher.RevealInExplorer(tile.Path)));
             if (tile.Path is not null && _settings.Shortcuts.Any(s => string.Equals(s.Path, tile.Path, StringComparison.OrdinalIgnoreCase)))
             {

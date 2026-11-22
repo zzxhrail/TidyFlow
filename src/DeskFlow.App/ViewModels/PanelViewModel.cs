@@ -195,6 +195,90 @@ public sealed class PanelViewModel : ObservableObject
         BuildCategories();
     }
 
+    private bool _isBrowsing;
+    private string _browseTitle = string.Empty;
+    private string _browseSubtitle = string.Empty;
+    private string _browsePath = string.Empty;
+
+    /// <summary>是否在"分类详情"里（面板内导航，不弹资源管理器）。</summary>
+    public bool IsBrowsing
+    {
+        get => _isBrowsing;
+        private set
+        {
+            if (SetProperty(ref _isBrowsing, value))
+            {
+                OnPropertyChanged(nameof(IsHome));
+            }
+        }
+    }
+
+    public bool IsHome => !_isBrowsing;
+
+    public string BrowseTitle
+    {
+        get => _browseTitle;
+        private set => SetProperty(ref _browseTitle, value);
+    }
+
+    public string BrowseSubtitle
+    {
+        get => _browseSubtitle;
+        private set => SetProperty(ref _browseSubtitle, value);
+    }
+
+    public string BrowsePath => _browsePath;
+
+    public ObservableCollection<BrowseItem> BrowseItems { get; } = new();
+
+    /// <summary>点分类文件夹：面板内切换到文件列表页。</summary>
+    public void OpenCategory(string directory, string title)
+    {
+        _browsePath = directory;
+        BrowseTitle = title;
+        BrowseItems.Clear();
+
+        if (!Directory.Exists(directory))
+        {
+            BrowseSubtitle = "目录不存在（可能还没归档过文件）";
+            IsBrowsing = true;
+            return;
+        }
+
+        try
+        {
+            var files = new DirectoryInfo(directory)
+                .EnumerateFiles()
+                .Where(static f => (f.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0)
+                .OrderByDescending(static f => f.LastWriteTime)
+                .Take(500)
+                .ToList();
+
+            foreach (var file in files)
+            {
+                BrowseItems.Add(new BrowseItem
+                {
+                    Name = file.Name,
+                    FullPath = file.FullName,
+                    SizeText = BrowseItem.FormatSize(file.Length),
+                    TimeText = file.LastWriteTime.ToString("MM-dd HH:mm"),
+                    Icon = ShellIconProvider.ForFile(file.FullName),
+                });
+            }
+
+            var folders = Directory.GetDirectories(directory).Length;
+            BrowseSubtitle = $"{files.Count} 个文件" + (folders > 0 ? $" · {folders} 个子目录" : string.Empty);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            BrowseSubtitle = "读取失败：" + ex.Message;
+        }
+
+        IsBrowsing = true;
+    }
+
+    public void CloseBrowse() => IsBrowsing = false;
+
     public ObservableCollection<string> Logs { get; } = new();
 
     public string LogText => string.Join(Environment.NewLine, Logs.TakeLast(3));
@@ -882,7 +966,7 @@ public sealed class PanelViewModel : ObservableObject
             }
 
             Categories.Add(MakeTile(
-                TileKind.Category,
+                TileKind.Browse,
                 category.Name,
                 $"{count} 个",
                 ShellIconProvider.ForFolder(directory),

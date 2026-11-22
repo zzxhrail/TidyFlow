@@ -11,6 +11,9 @@ public enum TileKind
     Add = 4,
     Batch = 5,
     Settings = 6,
+
+    /// <summary>分类文件夹：点开进面板内的列表页，而不是弹资源管理器。</summary>
+    Browse = 7,
 }
 
 /// <summary>面板上的一个图标格子。图标由 ShellIconProvider 从系统里取，跟资源管理器一致。</summary>

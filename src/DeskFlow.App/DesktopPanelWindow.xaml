@@ -21,7 +21,8 @@
         </LinearGradientBrush>
 
         <DataTemplate x:Key="TileTemplate">
-            <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}">
+            <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
+                    AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
                 <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}">
                     <Image Source="{Binding Icon}" HorizontalAlignment="Center"
                            Width="{Binding IconSize}" Height="{Binding IconSize}" />
@@ -85,7 +86,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel x:Name="Body">
+                    <StackPanel x:Name="Body" Visibility="{Binding IsHome, Converter={StaticResource BoolToVisibility}}">
 
                         <!-- 来源开关 -->
                         <Border CornerRadius="12" Background="#16FFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"
@@ -143,6 +144,55 @@
                             <TextBlock Text="{Binding LogText}" Foreground="{StaticResource TextTertiaryBrush}"
                                        FontSize="10" TextWrapping="Wrap" />
                         </Border>
+                    </StackPanel>
+
+                    <!-- 分类详情：面板内导航，不弹资源管理器 -->
+                    <StackPanel Visibility="{Binding IsBrowsing, Converter={StaticResource BoolToVisibility}}">
+                        <Grid Margin="0,14,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource IconButton}" Content="&#xE72B;"
+                                    ToolTip="返回" Click="BrowseBack_Click" Margin="0,0,4,0" />
+                            <StackPanel Grid.Column="1" Margin="4,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding BrowseTitle}" Foreground="{StaticResource TextPrimaryBrush}"
+                                           FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding BrowseSubtitle}" Foreground="{StaticResource TextTertiaryBrush}"
+                                           FontSize="10.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE8B7;"
+                                    ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding BrowseItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#12FFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                                            CornerRadius="10" Padding="10,8" Margin="0,0,0,6"
+                                            MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
+                                            Tag="{Binding}" Cursor="Hand">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Image Grid.Column="0" Source="{Binding Icon}" Width="22" Height="22" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}"
+                                                           FontSize="12.5" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding TimeText}" Foreground="{StaticResource TextTertiaryBrush}"
+                                                           FontSize="10" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5" Margin="8,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
