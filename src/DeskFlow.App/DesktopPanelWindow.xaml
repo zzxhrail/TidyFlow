@@ -144,7 +144,7 @@
                         <Grid>
                             <!-- 一级 -->
                             <ListBox x:Name="NavList" Width="128" Background="Transparent" BorderThickness="0"
-                                     ItemsSource="{Binding RootNav}" SelectionChanged="Nav_SelectionChanged"
+                                     ItemsSource="{Binding RootNav}" PreviewMouseRightButtonDown="NavList_RightClick" SelectionChanged="Nav_SelectionChanged"
                                      Visibility="{Binding IsNavRoot, Converter={StaticResource BoolToVisibility}}">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
@@ -182,7 +182,7 @@
                                         HorizontalAlignment="Left" Margin="4,0,0,4" ToolTip="返回"
                                         Click="NavBack_Click" />
                                 <ListBox x:Name="CategoryNav" Grid.Row="1" Width="128" Background="Transparent"
-                                         BorderThickness="0" ItemsSource="{Binding CategoryNav}"
+                                         BorderThickness="0" ItemsSource="{Binding CategoryNav}" PreviewMouseRightButtonDown="CategoryNav_RightClick"
                                          SelectionChanged="CategoryNav_SelectionChanged">
                                     <ListBox.ItemContainerStyle>
                                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">

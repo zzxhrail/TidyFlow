@@ -81,6 +81,25 @@ public sealed class CategoryCatalog
         _user.Add(new CategoryDefinition(clean, merged, isBuiltIn: false, glyph: "\uE8B7"));
     }
 
+    public bool RenameUserCategory(string oldName, string newName)
+    {
+        var clean = (newName ?? string.Empty).Trim();
+        if (clean.Length == 0)
+        {
+            return false;
+        }
+
+        var existing = _user.FirstOrDefault(c => string.Equals(c.Name, oldName, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            return false;
+        }
+
+        _user.Remove(existing);
+        _user.Add(new CategoryDefinition(clean, existing.Extensions, isBuiltIn: false, glyph: existing.Glyph));
+        return true;
+    }
+
     public bool RemoveUserCategory(string name) =>
         _user.RemoveAll(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)) > 0;
 }

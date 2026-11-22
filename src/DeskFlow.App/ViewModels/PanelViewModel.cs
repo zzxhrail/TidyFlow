@@ -81,6 +81,143 @@ public sealed class PanelViewModel : ObservableObject
         }
     }
 
+
+    /// <summary>新建分类：写进用户类别、在归档根建目录、刷新导航与分类网格。</summary>
+    public bool CreateCategory(string name, out string message)
+    {
+        var clean = (name ?? string.Empty).Trim();
+        if (clean.Length == 0)
+        {
+            message = "分类名不能为空";
+            return false;
+        }
+
+        if (_categories.All.Any(c => string.Equals(c.Name, clean, StringComparison.OrdinalIgnoreCase)))
+        {
+            message = "已经有这个分类了";
+            return false;
+        }
+
+        _settings.UserCategories.Add([clean]);
+        _settings.Save();
+        _categories.UpsertUserCategory(clean, Array.Empty<string>());
+
+        TryCreateArchiveFolder(clean);
+        BuildCategories();
+        RebuildNav();
+        Log($"已新建分类「{clean}」");
+        message = clean;
+        return true;
+    }
+
+    /// <summary>重命名用户自定义分类（内置分类不允许改名）。</summary>
+    public bool RenameCategory(string oldName, string newName, out string message)
+    {
+        var clean = (newName ?? string.Empty).Trim();
+        if (clean.Length == 0 || string.Equals(oldName, clean, StringComparison.OrdinalIgnoreCase))
+        {
+            message = "名字没变";
+            return false;
+        }
+
+        var index = _settings.UserCategories.FindIndex(c => c.Length > 0 && string.Equals(c[0], oldName, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
+            message = "只有自己新建的分类可以改名";
+            return false;
+        }
+
+        var extensions = _settings.UserCategories[index].Skip(1).ToArray();
+        _settings.UserCategories[index] = [clean, .. extensions];
+        _settings.Save();
+        _categories.RenameUserCategory(oldName, clean);
+
+        // 目录跟着改名（存在才改，避免误建空目录）
+        var oldDir = Path.Combine(_settings.ArchiveRoot, oldName);
+        var newDir = Path.Combine(_settings.ArchiveRoot, clean);
+        try
+        {
+            if (Directory.Exists(oldDir) && !Directory.Exists(newDir))
+            {
+                Directory.Move(oldDir, newDir);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log($"分类目录改名失败：{ex.Message}");
+        }
+
+        BuildCategories();
+        RebuildNav();
+        Log($"分类「{oldName}」改名为「{clean}」");
+        message = clean;
+        return true;
+    }
+
+    /// <summary>删除用户自定义分类（只删规则，磁盘上的文件不动）。</summary>
+    public bool RemoveCategory(string name, out string message)
+    {
+        var index = _settings.UserCategories.FindIndex(c => c.Length > 0 && string.Equals(c[0], name, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
+            message = "只有自己新建的分类可以删除";
+            return false;
+        }
+
+        _settings.UserCategories.RemoveAt(index);
+        _settings.Save();
+        _categories.RemoveUserCategory(name);
+        BuildCategories();
+        RebuildNav();
+        Log($"已删除分类规则「{name}」（磁盘上的文件没动）");
+        message = name;
+        return true;
+    }
+
+    /// <summary>把任意文件夹固定到一级导航。</summary>
+    public bool AddNavItem(string name, string path, out string message)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+        {
+            message = "目录不存在";
+            return false;
+        }
+
+        var title = string.IsNullOrWhiteSpace(name) ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar)) : name.Trim();
+        _settings.UserNavItems.RemoveAll(i => string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase));
+        _settings.UserNavItems.Add(new ShortcutItem { Name = title, Path = path, IsFolder = true });
+        _settings.Save();
+        RebuildNav();
+        Log($"已添加导航项「{title}」");
+        message = title;
+        return true;
+    }
+
+    public bool RemoveNavItem(string path)
+    {
+        var removed = _settings.UserNavItems.RemoveAll(i => string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase)) > 0;
+        if (removed)
+        {
+            _settings.Save();
+            RebuildNav();
+            Log("已移除该导航项");
+        }
+
+        return removed;
+    }
+
+    private void TryCreateArchiveFolder(string category)
+    {
+        try
+        {
+            var dir = Path.Combine(_settings.ArchiveRoot, FileArchiver.SanitizeFolderName(category));
+            Directory.CreateDirectory(dir);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log($"建目录失败：{ex.Message}");
+        }
+    }
     public bool HasPending => _pendingCount > 0;
 
     public bool HasRecent { get; private set; }
@@ -559,6 +696,15 @@ public sealed class PanelViewModel : ObservableObject
         RootNav.Add(new NavEntry("应用与快捷方式", "\uE71D", "section", "shortcuts"));
         RootNav.Add(new NavEntry("最近归档", "\uE81C", "section", "recent"));
         RootNav.Add(new NavEntry("分类", "\uE8B7", "group", "categories", Badge: "\uE76C"));
+
+        // 用户自定义的一级导航（指向任意文件夹）
+        foreach (var item in _settings.UserNavItems)
+        {
+            if (!string.IsNullOrWhiteSpace(item.Path) && Directory.Exists(item.Path))
+            {
+                RootNav.Add(new NavEntry(item.Name, "\uE8B7", "user", item.Path));
+            }
+        }
 
         CategoryNav.Clear();
         foreach (var category in Categories)

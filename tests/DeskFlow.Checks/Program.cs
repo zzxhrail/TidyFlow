@@ -736,6 +736,22 @@ Console.WriteLine("[20.7] Animations setting");
     Check("打开后能持久化", new ArchiveSettings().AnimationsEnabled);
 }
 
+// ---------- 20.8 自定义分类增删改 ----------
+Console.WriteLine("[20.8] User categories");
+{
+    var catalog = new CategoryCatalog();
+    catalog.UpsertUserCategory("我的合同", [".pdf"]);
+    Check("新增用户分类后能解析扩展名", catalog.Resolve("a.pdf").Name == "我的合同", catalog.Resolve("a.pdf").Name);
+
+    catalog.RenameUserCategory("我的合同", "合同归档");
+    Check("改名后旧名不再存在", catalog.All.All(c => c.Name != "我的合同"));
+    Check("改名后新名可解析", catalog.Resolve("b.pdf").Name == "合同归档", catalog.Resolve("b.pdf").Name);
+
+    Check("删除用户分类", catalog.RemoveUserCategory("合同归档"));
+    Check("删除后回落到内置规则", catalog.Resolve("c.pdf").Name == "办公文档", catalog.Resolve("c.pdf").Name);
+    Check("内置分类不能被删", !catalog.RemoveUserCategory("图片"));
+}
+
 // ---------- 21. 内容分类准确率 ----------
 Console.WriteLine("[21] Classifier accuracy");
 {

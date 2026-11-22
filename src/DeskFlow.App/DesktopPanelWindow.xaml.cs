@@ -673,6 +673,185 @@ public partial class DesktopPanelWindow : Window
 
     private void BrowseBack_Click(object sender, RoutedEventArgs e) => _viewModel.CloseBrowse();
 
+    /// <summary>一级导航右键：新建分类、把文件夹固定到导航、打开归档目录。</summary>
+    private void NavList_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        var entry = FindNavEntry(e.OriginalSource as DependencyObject);
+        var menu = new ContextMenu();
+
+        menu.Items.Add(MenuItemFor("新建分类…", NewCategory));
+        menu.Items.Add(MenuItemFor("添加导航（选文件夹）…", AddNavFromFolder));
+        if (entry is { Kind: "user" })
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(MenuItemFor($"移除导航「{entry.Title}」", () =>
+            {
+                _viewModel.RemoveNavItem(entry.Key);
+                AnimateContent();
+            }));
+        }
+
+        if (entry is { Kind: "group" })
+        {
+            menu.Items.Add(MenuItemFor("进入分类列表", () =>
+            {
+                _viewModel.OpenCategoryNav();
+                AnimateContent();
+            }));
+        }
+
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItemFor("在资源管理器中打开归档目录", () =>
+        {
+            try
+            {
+                Directory.CreateDirectory(_viewModel.ArchiveRoot);
+                System.Diagnostics.Process.Start("explorer.exe", _viewModel.ArchiveRoot);
+            }
+            catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
+            {
+            }
+        }));
+
+        menu.PlacementTarget = NavList;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    /// <summary>二级（分类）右键：新建 / 重命名 / 删除自定义分类。</summary>
+    private void CategoryNav_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        var entry = FindNavEntry(e.OriginalSource as DependencyObject);
+        var menu = new ContextMenu();
+
+        menu.Items.Add(MenuItemFor("新建分类…", NewCategory));
+
+        if (entry is { Kind: "category" })
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(MenuItemFor($"重命名「{entry.Title}」…", () => RenameCategory(entry)));
+            menu.Items.Add(MenuItemFor($"删除「{entry.Title}」", () => DeleteCategory(entry)));
+            menu.Items.Add(MenuItemFor("打开这个分类的文件夹", () =>
+            {
+                var dir = string.IsNullOrWhiteSpace(entry.Key) ? Path.Combine(_viewModel.ArchiveRoot, entry.Title) : entry.Key;
+                try
+                {
+                    if (Directory.Exists(dir))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", dir);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
+                {
+                }
+            }));
+        }
+
+        menu.PlacementTarget = CategoryNav;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private static ListBoxItem? FindListBoxItem(DependencyObject? source)
+    {
+        var current = source;
+        while (current is not null)
+        {
+            if (current is ListBoxItem item)
+            {
+                return item;
+            }
+
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static PanelViewModel.NavEntry? FindNavEntry(DependencyObject? source)
+    {
+        var current = source;
+        while (current is not null)
+        {
+            if (current is ListBoxItem { DataContext: PanelViewModel.NavEntry entry })
+            {
+                return entry;
+            }
+
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private void NewCategory()
+    {
+        var name = Dialogs.TextPromptWindow.Ask(this, "新建分类", "分类名称（会在归档目录下建立同名文件夹）");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        if (_viewModel.CreateCategory(name, out var message))
+        {
+            _viewModel.OpenCategoryNav();
+            AnimateContent();
+        }
+        else
+        {
+            MessageBox.Show(this, message, "新建分类", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void RenameCategory(PanelViewModel.NavEntry entry)
+    {
+        var name = Dialogs.TextPromptWindow.Ask(this, "重命名分类", "新的分类名称", entry.Title);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        if (!_viewModel.RenameCategory(entry.Title, name, out var message))
+        {
+            MessageBox.Show(this, message, "重命名分类", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        AnimateContent();
+    }
+
+    private void DeleteCategory(PanelViewModel.NavEntry entry)
+    {
+        var confirm = MessageBox.Show(this, $"删除分类「{entry.Title}」？\n\n只删除分类规则，磁盘上已经归档的文件不会动。",
+            "删除分类", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!_viewModel.RemoveCategory(entry.Title, out var message))
+        {
+            MessageBox.Show(this, message, "删除分类", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        AnimateContent();
+    }
+
+    private void AddNavFromFolder()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "选择要放到导航栏的文件夹" };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        if (!_viewModel.AddNavItem(string.Empty, dialog.FolderName, out var message))
+        {
+            MessageBox.Show(this, message, "添加导航", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        AnimateContent();
+    }
+
     private void NavBack_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.BackToRootNav();
