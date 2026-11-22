@@ -18,6 +18,7 @@
 
         <DataTemplate x:Key="TileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
+                    MouseEnter="Tile_MouseEnter" MouseLeave="Tile_MouseLeave"
                     HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
                 <StackPanel ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}"
@@ -232,6 +233,7 @@
                                         <DataTemplate>
                                             <Border Background="#0AFFFFFF" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
                                                     MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
+                                                            MouseEnter="BrowseRow_MouseEnter" MouseLeave="BrowseRow_MouseLeave"
                                                     Tag="{Binding}" Cursor="Hand">
                                                 <Border.Style>
                                                     <Style TargetType="Border">

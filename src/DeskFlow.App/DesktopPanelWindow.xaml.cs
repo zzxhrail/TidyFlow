@@ -71,6 +71,11 @@ public partial class DesktopPanelWindow : Window
         Loaded += OnLoaded;
         SizeChanged += OnSizeChanged;
         _resizeTimer.Tick += OnResizeSettled;
+
+        // 空格快速预览（类似 macOS Quick Look）：鼠标悬停哪个文件，就预览哪个
+        PreviewKeyDown += OnPanelKeyDown;
+        Loaded += (_, _) => InstallSpacePreviewHook();
+        Closed += (_, _) => UninstallSpacePreviewHook();
         LocationChanged += OnLocationChanged;
     }
 
@@ -399,12 +404,178 @@ public partial class DesktopPanelWindow : Window
     }
 
     /// <summary>待接收文件：先看内容再决定归档，别直接吞进分类目录。</summary>
-    private void OpenPreview(PanelTile tile)
+    // ---- 空格快速预览：全局低级键盘钩子（只在鼠标位于面板上时生效）----
+    private const int WhKeyboardLl = 13;
+    private const int WmKeydown = 0x0100;
+    private const int WmSyskeydown = 0x0104;
+    private const int VkSpace = 0x20;
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    private static LowLevelKeyboardProc? _hookProc;   // 保持引用，防止被 GC
+    private IntPtr _hook;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(POINT point);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT point);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    private void InstallSpacePreviewHook()
+    {
+        if (_hook != IntPtr.Zero)
+        {
+            return;
+        }
+
+        _hookProc = SpacePreviewHook;
+        _hook = SetWindowsHookEx(WhKeyboardLl, _hookProc, IntPtr.Zero, 0);
+        Services.Diagnostics.Log($"space preview hook={_hook}");
+    }
+
+    private void UninstallSpacePreviewHook()
+    {
+        if (_hook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hook);
+            _hook = IntPtr.Zero;
+            _hookProc = null;
+        }
+    }
+
+    /// <summary>
+    /// 鼠标压在面板上时按下空格 → 预览悬停的文件。
+    /// 用全局钩子是故意的：这样不用先点一下面板拿焦点（和 macOS Quick Look 一样）；
+    /// 钩子里只做判断和投递，真正的窗口弹在 UI 线程上做。
+    /// </summary>
+    private IntPtr SpacePreviewHook(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && (wParam == WmKeydown || wParam == WmSyskeydown))
+        {
+            var vk = System.Runtime.InteropServices.Marshal.ReadInt32(lParam);
+            if (vk == VkSpace && _settings.SpacePreviewEnabled && IsCursorOverPanel())
+            {
+                var hovered = _hoverTile;
+                var row = _hoverBrowseItem;
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (hovered is { Kind: TileKind.Pending or TileKind.File } tile && !string.IsNullOrWhiteSpace(tile.Path))
+                    {
+                        OpenPreview(tile, tile.Kind == TileKind.Pending);
+                    }
+                    else if (row is not null)
+                    {
+                        var fileTile = new PanelTile
+                        {
+                            Kind = TileKind.File,
+                            Title = row.Name,
+                            Path = row.FullPath,
+                            Icon = row.Icon,
+                        };
+
+                        OpenPreview(fileTile, isPending: false);
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Input);
+
+                return (IntPtr)1;   // 吃掉这个空格，别让面板滚动/按钮触发
+            }
+        }
+
+        return CallNextHookEx(_hook, nCode, wParam, lParam);
+    }
+
+    private bool IsCursorOverPanel()
+    {
+        if (!IsVisible || WindowState == WindowState.Minimized)
+        {
+            return false;
+        }
+
+        if (!GetCursorPos(out var point))
+        {
+            return false;
+        }
+
+        var hwnd = WindowFromPoint(point);
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var root = GetAncestor(hwnd, 2);   // GA_ROOT
+        var self = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        return root == self || hwnd == self;
+    }
+
+    private PanelTile? _hoverTile;
+    private BrowseItem? _hoverBrowseItem;
+
+    private void Tile_MouseEnter(object sender, MouseEventArgs e) =>
+        _hoverTile = (sender as FrameworkElement)?.Tag as PanelTile;
+
+    private void Tile_MouseLeave(object sender, MouseEventArgs e) => _hoverTile = null;
+
+    private void BrowseRow_MouseEnter(object sender, MouseEventArgs e) =>
+        _hoverBrowseItem = (sender as FrameworkElement)?.Tag as BrowseItem;
+
+    private void BrowseRow_MouseLeave(object sender, MouseEventArgs e) => _hoverBrowseItem = null;
+
+    /// <summary>空格：预览鼠标正悬停的那个文件（待接收用完整预览，已归档的只读预览）。</summary>
+    private void OnPanelKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space || !_settings.SpacePreviewEnabled)
+        {
+            return;
+        }
+
+        if (_hoverTile is { Kind: TileKind.Pending or TileKind.File } tile && !string.IsNullOrWhiteSpace(tile.Path))
+        {
+            e.Handled = true;
+            OpenPreview(tile, tile.Kind == TileKind.Pending);
+            return;
+        }
+
+        if (_hoverBrowseItem is not null)
+        {
+            e.Handled = true;
+            var tileForFile = new PanelTile
+            {
+                Kind = TileKind.File,
+                Title = _hoverBrowseItem.Name,
+                Path = _hoverBrowseItem.FullPath,
+                Icon = _hoverBrowseItem.Icon,
+            };
+
+            OpenPreview(tileForFile, isPending: false);
+        }
+    }
+
+    private void OpenPreview(PanelTile tile, bool isPending = true)
     {
         try
         {
             Services.Diagnostics.Log($"open preview: {tile.Title} path={tile.Path}");
-            var window = new Preview.PreviewWindow(_viewModel, tile) { Owner = this };
+            var window = new Preview.PreviewWindow(_viewModel, tile, isPending) { Owner = this };
             window.ShowDialog();
             Services.Diagnostics.Log("preview closed");
         }

@@ -31,9 +31,11 @@ public partial class PreviewWindow : Window
     private readonly PanelViewModel _viewModel;
     private readonly PanelTile _tile;
     private readonly string _path;
+    private readonly bool _isPending;
 
-    public PreviewWindow(PanelViewModel viewModel, PanelTile tile)
+    public PreviewWindow(PanelViewModel viewModel, PanelTile tile, bool isPending = true)
     {
+        _isPending = isPending;
         InitializeComponent();
         Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/icon-128.png"));
 
@@ -45,6 +47,14 @@ public partial class PreviewWindow : Window
         NameText.Text = tile.Title;
         PathText.Text = _path;
         FileIcon.Source = tile.Icon;
+
+        if (!isPending)
+        {
+            // 已归档的文件：只保留"打开"和"关闭"，归档/忽略没有意义
+            AcceptButton.Visibility = Visibility.Collapsed;
+            IgnoreButton.Visibility = Visibility.Collapsed;
+            OpenButton.Content = "用默认程序打开";
+        }
 
         LoadPreview();
     }

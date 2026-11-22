@@ -286,12 +286,26 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="显示在桌面面板「应用与快捷方式」里的图标" FontWeight="SemiBold" />
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="面板快捷方式" Style="{StaticResource PageTitle}" />
+                    <TextBlock Text="显示在面板「应用与快捷方式」里的图标" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                </StackPanel>
                 <ListBox x:Name="ShortcutList" Grid.Row="1" Margin="0,10" DisplayMemberPath="Display" />
-                <StackPanel Grid.Row="2" Orientation="Horizontal">
-                    <Button Content="添加程序/文件…" Click="AddShortcutFile_Click" />
-                    <Button Content="添加文件夹…" Click="AddShortcutFolder_Click" />
-                    <Button Content="移除选中" Click="RemoveShortcut_Click" />
+                <StackPanel Grid.Row="2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="添加程序/文件…" Click="AddShortcutFile_Click" />
+                        <Button Content="添加文件夹…" Click="AddShortcutFolder_Click" />
+                        <Button Content="移除选中" Click="RemoveShortcut_Click" />
+                    </StackPanel>
+
+                    <Border Style="{StaticResource Card}" Padding="16,12" Margin="0,16,0,0">
+                        <StackPanel>
+                            <CheckBox x:Name="SpacePreviewCheck"
+                                      Content="空格键快速预览（鼠标悬停文件后按空格）" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="28,6,0,0" TextWrapping="Wrap"
+                                       Text="待接收里的文件按空格 = 完整预览（可归档/忽略）；已归档文件与分类列表里的文件按空格 = 只读预览。" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
             </ScrollViewer>
