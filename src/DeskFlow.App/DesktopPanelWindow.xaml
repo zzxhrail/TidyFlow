@@ -19,29 +19,30 @@
         <DataTemplate x:Key="TileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseRightButtonUp="Tile_RightClick" Tag="{Binding}"
                     MouseEnter="Tile_MouseEnter" MouseLeave="Tile_MouseLeave"
-                    HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
+                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding ToolTip}">
-                <Grid Width="{Binding BoxWidth}" Height="{Binding BoxHeight}" HorizontalAlignment="Left">
+                <Grid Height="{Binding BoxHeight}" HorizontalAlignment="Stretch">
                     <CheckBox Style="{StaticResource TilePicker}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
                               Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}"
-                              Click="TilePicker_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0" />
-                <StackPanel Margin="0,15,0,0" ClipToBounds="True" Width="{Binding BoxWidth}" Height="{Binding BoxHeight}"
-                            HorizontalAlignment="Left">
-                    <Image Source="{Binding Icon}" HorizontalAlignment="Left"
-                           Width="{Binding IconSize}" Height="{Binding IconSize}" />
-                    <TextBlock Text="{Binding TitleText}" Foreground="{StaticResource TextPrimaryBrush}"
-                               TextWrapping="Wrap" TextAlignment="Left" Margin="0,6,0,0"
-                               Width="{Binding BoxWidth}"
-                               FontSize="{Binding TitleFontSize}"
-                               LineHeight="{Binding LineHeight}"
-                               LineStackingStrategy="BlockLineHeight"
-                               MaxHeight="{Binding MaxTitleHeight}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SubtitleText}" Foreground="{StaticResource TextTertiaryBrush}"
-                               TextAlignment="Left" Margin="0,3,0,0" TextWrapping="NoWrap"
-                               Width="{Binding BoxWidth}"
-                               FontSize="{Binding SubtitleFontSize}"
-                               Visibility="{Binding ShowSubtitle, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                              Click="TilePicker_Click" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,0" />
+                    <StackPanel Margin="0,16,0,0" ClipToBounds="True" HorizontalAlignment="Center" Width="{Binding BoxWidth}">
+                        <Image Source="{Binding Icon}" HorizontalAlignment="Center"
+                               Width="{Binding IconSize}" Height="{Binding IconSize}" />
+                        <TextBlock Text="{Binding TitleText}" Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"
+                                   HorizontalAlignment="Center"
+                                   Width="{Binding BoxWidth}"
+                                   FontSize="{Binding TitleFontSize}"
+                                   LineHeight="{Binding LineHeight}"
+                                   LineStackingStrategy="BlockLineHeight"
+                                   MaxHeight="{Binding MaxTitleHeight}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding SubtitleText}" Foreground="{StaticResource TextTertiaryBrush}"
+                                   TextAlignment="Center" Margin="0,3,0,0" TextWrapping="NoWrap"
+                                   HorizontalAlignment="Center"
+                                   Width="{Binding BoxWidth}"
+                                   FontSize="{Binding SubtitleFontSize}"
+                                   Visibility="{Binding ShowSubtitle, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
                 </Grid>
             </Button>
         </DataTemplate>
