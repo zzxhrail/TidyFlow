@@ -1300,6 +1300,172 @@ public sealed class PanelViewModel : ObservableObject
     }
 
     /// <summary>删除归档文件（进回收站），记录标记为已删除。</summary>
+    // ---------------- 移动模式 ----------------
+
+    private bool _isMoveMode;
+
+    /// <summary>是否处于「移动」模式：内容区右侧出现目标分类与预览。</summary>
+    public bool IsMoveMode
+    {
+        get => _isMoveMode;
+        private set
+        {
+            if (SetProperty(ref _isMoveMode, value))
+            {
+                OnPropertyChanged(nameof(IsMoveModeVisible));
+            }
+        }
+    }
+
+    public bool IsMoveModeVisible => _isMoveMode;
+
+    private string _moveTargetName = string.Empty;
+    private string _moveTargetPath = string.Empty;
+
+    public string MoveTargetName
+    {
+        get => _moveTargetName;
+        private set
+        {
+            if (SetProperty(ref _moveTargetName, value))
+            {
+                OnPropertyChanged(nameof(MoveTargetHint));
+            }
+        }
+    }
+
+    public string MoveTargetHint => string.IsNullOrWhiteSpace(_moveTargetName)
+        ? "先在右侧选一个目标分类"
+        : $"移动到「{_moveTargetName}」（{MoveTargetItems.Count} 个文件）";
+
+    /// <summary>右侧预览：目标分类里已有哪些文件。</summary>
+    public ObservableCollection<BrowseItem> MoveTargetItems { get; } = new();
+
+    public void EnterMoveMode()
+    {
+        IsMoveMode = true;
+        MoveTargetName = string.Empty;
+        _moveTargetPath = string.Empty;
+        MoveTargetItems.Clear();
+        RaiseConfirmed("选择右侧目标分类，再点「确认移动」");
+    }
+
+    public void ExitMoveMode()
+    {
+        IsMoveMode = false;
+        MoveTargetName = string.Empty;
+        _moveTargetPath = string.Empty;
+        MoveTargetItems.Clear();
+    }
+
+    /// <summary>右侧选中一个目标分类：加载它已有的文件作为预览。</summary>
+    public void SetMoveTarget(string name, string path)
+    {
+        MoveTargetName = name;
+        _moveTargetPath = string.IsNullOrWhiteSpace(path) ? Path.Combine(_settings.ArchiveRoot, name) : path;
+        MoveTargetItems.Clear();
+
+        try
+        {
+            if (Directory.Exists(_moveTargetPath))
+            {
+                foreach (var file in new DirectoryInfo(_moveTargetPath).EnumerateFiles().OrderByDescending(f => f.LastWriteTime).Take(50))
+                {
+                    MoveTargetItems.Add(new BrowseItem
+                    {
+                        Name = file.Name,
+                        FullPath = file.FullName,
+                        SizeText = BrowseItem.FormatSize(file.Length),
+                        TimeText = file.LastWriteTime.ToString("MM-dd HH:mm"),
+                        Icon = ShellIconProvider.ForFile(file.FullName),
+                    });
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log($"读取目标分类失败：{ex.Message}");
+        }
+
+        OnPropertyChanged(nameof(MoveTargetHint));
+    }
+
+    /// <summary>待移动的条目（当前列表里勾选的）。</summary>
+    public IReadOnlyList<BrowseItem> SelectedBrowseItems => BrowseItems.Where(static i => i.IsSelected).ToList();
+
+    /// <summary>真正执行移动：文件搬到目标分类目录，索引与日志同步更新。</summary>
+    public int MoveSelectedToTarget()
+    {
+        var selected = SelectedBrowseItems;
+        if (selected.Count == 0 || string.IsNullOrWhiteSpace(_moveTargetPath))
+        {
+            return 0;
+        }
+
+        var targetName = MoveTargetName;
+        var targetPath = _moveTargetPath;
+        Directory.CreateDirectory(targetPath);
+
+        var moved = 0;
+        foreach (var item in selected)
+        {
+            var destination = UniquePath(targetPath, item.Name);
+            try
+            {
+                File.Move(item.FullPath, destination);
+                moved++;
+
+                var record = _index.All.FirstOrDefault(r => string.Equals(r.ArchivedPath, item.FullPath, StringComparison.OrdinalIgnoreCase));
+                if (record is not null)
+                {
+                    record.ArchivedPath = destination;
+                    record.Category = targetName;
+                    _index.Upsert(record);
+                }
+
+                _archiveLog.Archive(item.Name, targetName, "移动", item.FullPath, destination);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log($"移动失败 {item.Name}：{ex.Message}");
+            }
+        }
+
+        if (moved > 0)
+        {
+            RaiseConfirmed($"已移动 {moved} 个文件到「{targetName}」");
+            Log($"移动 {moved} 个文件到 {targetName}");
+            OpenCategory(_browsePath, BrowseTitle);
+            BuildCategories();
+            BuildRecent();
+        }
+
+        ExitMoveMode();
+        return moved;
+    }
+
+    private static string UniquePath(string directory, string fileName)
+    {
+        var target = Path.Combine(directory, fileName);
+        if (!File.Exists(target))
+        {
+            return target;
+        }
+
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        for (var i = 2; i < 1000; i++)
+        {
+            var candidate = Path.Combine(directory, $"{name} ({i}){extension}");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.Combine(directory, $"{name}-{Guid.NewGuid():N}{extension}");
+    }
+
     /// <summary>把选中的归档文件删到回收站，并把对应记录标记为已删除。</summary>
     public int DeleteArchivedFiles(IEnumerable<string> paths)
     {

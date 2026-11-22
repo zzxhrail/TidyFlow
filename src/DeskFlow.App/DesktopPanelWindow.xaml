@@ -296,7 +296,12 @@
                             </StackPanel>
 
                             <!-- 分类详情 -->
-                            <StackPanel Visibility="{Binding IsCategorySection, Converter={StaticResource BoolToVisibility}}">
+                            <Grid Visibility="{Binding IsCategorySection, Converter={StaticResource BoolToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
                                 <Grid Margin="2,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -312,6 +317,7 @@
                                         <Button x:Name="BrowseSelectAllButton" Content="全选" Click="BrowseSelectAll_Click" Margin="0,0,6,0" />
                                         <Button x:Name="BrowseDeleteButton" Content="删除选中" Click="BrowseDeleteSelected_Click"
                                                 Style="{StaticResource AccentButton}" Margin="0,0,6,0" />
+                                        <Button x:Name="BrowseMoveButton" Content="移动" Click="BrowseMove_Click" Margin="0,0,6,0" />
                                         <Button Style="{StaticResource IconButton}" Content="&#xE8B7;"
                                                 ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
                                     </StackPanel>
@@ -355,7 +361,52 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                            </StackPanel>
+                                </StackPanel>
+
+                                <!-- 移动模式：右侧显示目标分类 + 该分类已有文件预览 -->
+                                <Border Grid.Column="1" Width="360" Margin="12,0,0,0" Padding="12"
+                                        CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1"
+                                        Visibility="{Binding IsMoveModeVisible, Converter={StaticResource BoolToVisibility}}">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Top">
+                                            <TextBlock Text="移动到…" Style="{StaticResource SectionHeader}" Margin="0,0,0,6" />
+                                            <TextBlock Text="{Binding MoveTargetHint}" Style="{StaticResource Muted}"
+                                                       TextWrapping="Wrap" Margin="0,0,0,8" />
+                                        </StackPanel>
+                                        <Button DockPanel.Dock="Bottom" Content="取消移动" Click="BrowseMoveCancel_Click" Margin="0,8,0,0" />
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <ListBox x:Name="MoveTargetList" Grid.Row="0" MaxHeight="180"
+                                                     ItemsSource="{Binding CategoryNav}"
+                                                     SelectionChanged="MoveTarget_SelectionChanged">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Title}" FontSize="12.5" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                            <ItemsControl Grid.Row="1" Margin="0,8,0,0" ItemsSource="{Binding MoveTargetItems}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,2">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Image Source="{Binding Icon}" Width="16" Height="16" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="6,0,0,0" FontSize="11.5"
+                                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

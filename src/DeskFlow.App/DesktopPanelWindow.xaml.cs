@@ -1178,6 +1178,74 @@ public partial class DesktopPanelWindow : Window
         UpdateBrowseSelection();
     }
 
+    /// <summary>「移动」：进入时右侧出现目标分类，再点一次弹确认框（带预览表）。</summary>
+    private void BrowseMove_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsMoveMode)
+        {
+            if (_viewModel.BrowseItems.Count == 0)
+            {
+                MessageBox.Show(this, "这个分类里还没有文件。", "移动", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _viewModel.EnterMoveMode();
+            BrowseMoveButton.Content = "确认移动";
+            AnimateContent(1);
+            return;
+        }
+
+        var selected = _viewModel.SelectedBrowseItems;
+        if (selected.Count == 0)
+        {
+            MessageBox.Show(this, "先勾选要移动的文件。", "移动", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_viewModel.MoveTargetName))
+        {
+            MessageBox.Show(this, "先点右侧的目标分类（“移动到…”列表）。", "移动", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirm = new Move.MoveConfirmWindow(
+            _viewModel.BrowseTitle,
+            _viewModel.MoveTargetName,
+            selected.Select(static item => item.Name).ToList())
+        {
+            Owner = this,
+        };
+
+        if (confirm.ShowDialog() != true)
+        {
+            return;
+        }
+
+        var moved = _viewModel.MoveSelectedToTarget();
+        BrowseMoveButton.Content = "移动";
+        UpdateBrowseSelection();
+        AnimateContent();
+        if (moved == 0)
+        {
+            MessageBox.Show(this, "没有文件被移动（可能已被移动或被占用）。", "移动", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void BrowseMoveCancel_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ExitMoveMode();
+        BrowseMoveButton.Content = "移动";
+        AnimateContent();
+    }
+
+    private void MoveTarget_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MoveTargetList?.SelectedItem is PanelViewModel.NavEntry { Kind: "category" } entry)
+        {
+            _viewModel.SetMoveTarget(entry.Title, entry.Key);
+        }
+    }
+
     private void BrowseSelectAll_Click(object sender, RoutedEventArgs e)
     {
         var select = !_viewModel.BrowseItems.All(static item => item.IsSelected);
