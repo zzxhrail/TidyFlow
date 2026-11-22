@@ -525,6 +525,59 @@ public sealed class PanelViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 监听诊断：每个目录是否可读、最近 24 小时有多少个"非噪声"新文件、最新一个是什么。
+    /// 用来回答"到底是我没监听到，还是客户端根本没落盘"。
+    /// </summary>
+    public async Task<IReadOnlyList<WatchDiagnostic>> DiagnoseAsync()
+    {
+        var targets = BuildTargets();
+        var probes = await Task.Run(() => WatchDiagnostics.Probe(targets, TimeSpan.FromHours(24)));
+        return probes
+            .Select(p => new WatchDiagnostic(p.Name, p.Path, p.Exists, p.Detected, p.RecentCount, p.LatestName, p.LatestTime))
+            .ToList();
+    }
+
+    /// <summary>手动归档：自动监听没接住时，用户自己选文件进来（走同一套分类/判重）。</summary>
+    public async Task<int> ImportFilesAsync(IEnumerable<string> paths)
+    {
+        var archived = 0;
+        foreach (var path in paths)
+        {
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            var info = new FileInfo(path);
+            var record = new FileRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                SourcePath = info.FullName,
+                FileName = info.Name,
+                SizeBytes = info.Length,
+                Source = FileSource.Manual,
+                Category = _categories.Resolve(info.Name).Name,
+            };
+
+            var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
+            {
+                ArchiveRoot = _settings.ArchiveRoot,
+                MoveInsteadOfCopy = _settings.MoveInsteadOfCopy,
+            });
+
+            _index.Upsert(outcome.Record);
+            if (outcome.Success)
+            {
+                archived++;
+                Log($"手动归档 {record.FileName} → {record.Category}");
+            }
+        }
+
+        RefreshAll();
+        return archived;
+    }
+
     /// <summary>兜底扫描盘符找数据目录，结果缓存进配置，然后重启监听。</summary>
     public async Task<string> ScanForDataRootsAsync()
     {

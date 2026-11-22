@@ -5,6 +5,7 @@ using DeskFlow.Core.Runtime;
 using DeskFlow.Infrastructure;
 using DeskFlow.Infrastructure.Observers;
 using DeskFlow.Infrastructure.Settings;
+using DeskFlow.Infrastructure.Watch;
 
 namespace DeskFlow.App.Cli;
 
@@ -15,7 +16,7 @@ namespace DeskFlow.App.Cli;
 public static class CliHost
 {
     public static bool IsCliInvocation(string[] args) =>
-        args.Any(a => a is "--run" or "-r" or "--help" or "-h" or "--steps");
+        args.Any(a => a is "--run" or "-r" or "--help" or "-h" or "--steps" or "--diagnose" or "--selftest");
 
     public static int Run(string[] args)
     {
@@ -34,6 +35,12 @@ public static class CliHost
     private static int RunCore(string[] args)
     {
         var options = Parse(args);
+
+        if (args.Any(static a => a is "--diagnose" or "--selftest"))
+        {
+            return RunDiagnose();
+        }
+
         if (options.ShowHelp)
         {
             PrintHelp();
@@ -111,6 +118,52 @@ public static class CliHost
         Console.WriteLine($"  日志: {logPath}");
         ConsoleAttach.Detach();
         return report.Succeeded ? 0 : 1;
+    }
+
+    /// <summary>
+    /// 监听诊断：把每个被监听目录的"存在性 / 最近 24h 非噪声新文件数 / 最新文件名"打出来。
+    /// 用来区分"软件没监听到"和"客户端根本没落盘"。
+    /// </summary>
+    private static int RunDiagnose()
+    {
+        var settings = new ArchiveSettings();
+        var targets = new List<DeskFlow.Core.Models.WatchTarget>();
+        targets.AddRange(SourceDirectoryResolver.Discover(cachedRoots: settings.DiscoveryRoots));
+        foreach (var extra in settings.ExtraTargets)
+        {
+            if (Directory.Exists(extra.Path))
+            {
+                targets.Add(new DeskFlow.Core.Models.WatchTarget(extra.Name, extra.Path, DeskFlow.Core.Models.FileSource.Manual, IsDetected: false));
+            }
+        }
+
+        Console.WriteLine("DeskFlow 监听诊断");
+        Console.WriteLine($"Documents = {Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}");
+        Console.WriteLine($"监听目录  = {targets.Count} 个");
+        Console.WriteLine();
+
+        var probes = WatchDiagnostics.Probe(targets, TimeSpan.FromHours(24));
+        foreach (var probe in probes)
+        {
+            var state = probe.Exists
+                ? (probe.RecentCount > 0 ? $"24h 内 {probe.RecentCount} 个文件" : "目录存在，24h 内没有新文件")
+                : "目录不存在";
+            Console.WriteLine($"[{probe.Source.DisplayName()}] {probe.Name}");
+            Console.WriteLine($"    路径: {probe.Path}");
+            Console.WriteLine($"    状态: {state}");
+            if (probe.LatestName is not null)
+            {
+                Console.WriteLine($"    最新: {probe.LatestName}  ({probe.LatestTime:yyyy-MM-dd HH:mm})");
+            }
+
+            Console.WriteLine();
+        }
+
+        var total = probes.Sum(static p => p.RecentCount);
+        Console.WriteLine($"合计：24 小时内非噪声新文件 {total} 个");
+        Console.WriteLine("如果这里全是 0，说明聊天工具还没把文件写到本地 —— 在客户端里点一下文件让它下载。");
+        ConsoleAttach.Detach();
+        return 0;
     }
 
     private sealed record CliOptions(

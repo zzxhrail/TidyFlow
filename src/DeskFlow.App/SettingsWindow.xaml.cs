@@ -31,11 +31,38 @@ public partial class SettingsWindow : Window
         RefreshShortcuts();
     }
 
-    private void RefreshWatchList()
+    private async void RefreshWatchList()
     {
-        WatchList.ItemsSource = _viewModel.BuildTargets()
-            .Select(t => new ListRow($"{t.Name}  —  {t.Directory}", t.Directory))
+        if (WatchList is null)
+        {
+            return;
+        }
+
+        WatchList.ItemsSource = new List<ListRow> { new("正在统计…", string.Empty) };
+        var rows = await _viewModel.DiagnoseAsync();
+        WatchList.ItemsSource = rows
+            .Select(r => new ListRow(r.Display, r.Path))
             .ToList();
+    }
+
+    private void Diagnose_Click(object sender, RoutedEventArgs e) => RefreshWatchList();
+
+    private async void ManualImport_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "选择要归档的文件",
+            Multiselect = true,
+            Filter = "所有文件|*.*",
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var count = await _viewModel.ImportFilesAsync(dialog.FileNames);
+        MessageBox.Show($"已归档 {count} 个文件。", "DeskFlow", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void RefreshCategories()

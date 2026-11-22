@@ -206,6 +206,7 @@ public static class SourceDirectoryResolver
         {
             targets.Add(new WatchTarget("下载目录", downloads, FileSource.Downloads, IsDetected: true));
         }
+
     }
 
     private static string ShortName(string directory)
