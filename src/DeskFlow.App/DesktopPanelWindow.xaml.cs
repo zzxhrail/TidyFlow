@@ -259,6 +259,13 @@ public partial class DesktopPanelWindow : Window
     {
         _resizeTimer.Stop();
         _viewModel.ApplyPanelWidth(ActualWidth);
+
+        // 收起态高度变了：记住新高度，并决定是否进入"只显示图标"的紧凑模式
+        if (_collapsed)
+        {
+            _settings.PanelCollapsedHeight = ActualHeight;
+            UpdateCompactMode();
+        }
     }
 
     private void OnLocationChanged(object? sender, EventArgs e)
@@ -390,12 +397,12 @@ public partial class DesktopPanelWindow : Window
         set
         {
             SetValue(CompactBarProperty, value);
-            SetValue(CompactIconSizeProperty, value ? 20d : 26d);
+            SetValue(CompactIconSizeProperty, value ? 26d : 32d);
         }
     }
 
     public static readonly DependencyProperty CompactIconSizeProperty = DependencyProperty.Register(
-        nameof(CompactIconSize), typeof(double), typeof(DesktopPanelWindow), new PropertyMetadata(26d));
+        nameof(CompactIconSize), typeof(double), typeof(DesktopPanelWindow), new PropertyMetadata(32d));
 
     /// <summary>收起条图标尺寸：普通 26，紧凑（矮条）18。</summary>
     public double CompactIconSize
@@ -567,7 +574,7 @@ public partial class DesktopPanelWindow : Window
             return;
         }
 
-        CompactBar = Height < 96;
+        CompactBar = Height < 112;
     }
 
     /// <summary>量一下收起条"一行图标 + 名字"需要多高，作为收起态的最小高度。</summary>
@@ -778,11 +785,11 @@ public partial class DesktopPanelWindow : Window
 
             // 下限 56 DIP：低于 84 DIP 时自动进入"只显示图标"的紧凑模式，所以不会再切字
             var natural = MeasureCollapsedBarHeight();
-            MinHeight = 72;
+            MinHeight = 88;
             MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 24);
             BodyScroller.Visibility = Visibility.Collapsed;
             CollapsedBar.Visibility = Visibility.Visible;
-            Height = Math.Clamp(_settings.PanelCollapsedHeight, 72, Math.Max(320, SystemParameters.WorkArea.Height - 24));
+            Height = Math.Clamp(_settings.PanelCollapsedHeight, 88, Math.Max(320, SystemParameters.WorkArea.Height - 24));
             UpdateCompactMode();
 
             // 收起后置顶，随时能点到（用户也可以再点按钮取消）

@@ -48,14 +48,14 @@
         <!-- 收起状态的横向应用条：小图标，可横向滚动，双击启动 -->
         <DataTemplate x:Key="CollapsedTileTemplate">
             <Button Style="{StaticResource TileButton}" Click="Tile_Click" MouseDoubleClick="Tile_DoubleClick"
-                    MouseRightButtonUp="Tile_RightClick" Tag="{Binding}" Width="56" Margin="2,0,2,0"
+                    MouseRightButtonUp="Tile_RightClick" Tag="{Binding}" Width="60" Margin="2,2,2,2"
                     Padding="4,2,4,2" AutomationProperties.Name="{Binding Title}"
                     ToolTip="{Binding ToolTip}">
                 <StackPanel HorizontalAlignment="Center">
                     <Image Source="{Binding Icon}" HorizontalAlignment="Center"
                            Width="{Binding CompactIconSize, RelativeSource={RelativeSource AncestorType=Window}}"
                            Height="{Binding CompactIconSize, RelativeSource={RelativeSource AncestorType=Window}}" />
-                    <TextBlock Text="{Binding Title}" FontSize="9.5" Margin="0,2,0,0" Width="48"
+                    <TextBlock Text="{Binding Title}" FontSize="10" Margin="0,3,0,0" Width="54"
                                TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding CompactBar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVisibility}}"
                                Foreground="{StaticResource TextSecondaryBrush}" />

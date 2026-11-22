@@ -965,3 +965,16 @@ CollapsedBar.Measure(宽度, 无穷高) → 内容高 + 上下留白 ≈ 99 DIP
 ![收起最小高度](docs/screenshot-collapsed-min.png)
 
 截图是最低高度（108 px ≈ 72 DIP）下的样子：图标完整、文字自动隐藏，右侧按钮仍在。
+
+
+## 0.9.22：收起条图标放大
+
+| 项 | 之前 | 现在 |
+| --- | --- | --- |
+| 收起条图标 | 26 DIP / 最矮 20 DIP | **32 DIP / 最矮 26 DIP** |
+| 最小高度 | 72 DIP（图标偏小） | **88 DIP**，正好放下一排 26 DIP 图标 |
+| 紧凑判定 | 只在收起那一刻判断 | 缩放结算时重算（`OnResizeSettled`） |
+
+![最矮状态](docs/screenshot-collapsed-min.png)
+
+截图是最小高度（132 px ≈ 88 DIP）：一排图标完整显示、无切图。
