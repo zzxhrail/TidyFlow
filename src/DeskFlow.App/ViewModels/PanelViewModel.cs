@@ -24,6 +24,11 @@ public sealed class PanelViewModel : ObservableObject
     private readonly CategoryCatalog _categories;
     private readonly FileArchiver _archiver;
     private readonly DeskFlow.Infrastructure.History.ArchiveLog _archiveLog = new();
+
+    // 批量归档的判定：同一类别、间隔 15 秒内的连续归档算同一批
+    private string? _lastBatchId;
+    private string? _lastBatchCategory;
+    private DateTimeOffset _lastBatchAt;
     private IncomingWatcher? _watcher;
     private GlobalFileWatcher? _globalWatcher;
     private string _status = "就绪";
@@ -364,6 +369,7 @@ public sealed class PanelViewModel : ObservableObject
 
             ToastService.Show("发现新文件，正在归档", $"{info.Name} → {category.Name}", info.FullName);
 
+            record.BatchId = NextBatchId(record.Category);
             var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
             {
                 ArchiveRoot = _settings.ArchiveRoot,
@@ -515,6 +521,8 @@ public sealed class PanelViewModel : ObservableObject
         {
             return;
         }
+
+        record.BatchId = NextBatchId(record.Category);
 
         var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
         {
@@ -669,6 +677,8 @@ public sealed class PanelViewModel : ObservableObject
 
     private async Task ArchiveAndRecordAsync(FileRecord record)
     {
+        record.BatchId = NextBatchId(record.Category);
+
         var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
         {
             ArchiveRoot = _settings.ArchiveRoot,
@@ -821,6 +831,43 @@ public sealed class PanelViewModel : ObservableObject
             .ToList();
     }
 
+    /// <summary>给即将归档的文件分配批次号：同类别 + 15 秒内共用一批。</summary>
+    private string NextBatchId(string category)
+    {
+        var now = DateTimeOffset.Now;
+        if (_lastBatchId is not null &&
+            string.Equals(_lastBatchCategory, category, StringComparison.OrdinalIgnoreCase) &&
+            (now - _lastBatchAt).TotalSeconds <= 15)
+        {
+            _lastBatchAt = now;
+            return _lastBatchId;
+        }
+
+        _lastBatchId = Guid.NewGuid().ToString("N")[..8];
+        _lastBatchCategory = category;
+        _lastBatchAt = now;
+        return _lastBatchId;
+    }
+
+    /// <summary>把可撤销记录按批次分组（类别 + 批次号），用于"撤销最近一批"。</summary>
+    public IReadOnlyList<DeskFlow.Infrastructure.History.ArchiveBatch> GetUndoableBatches() =>
+        DeskFlow.Infrastructure.History.ArchiveBatches.Group(GetUndoableRecords());
+
+    /// <summary>批量撤销一整批，返回成功数量。</summary>
+    public async Task<int> UndoBatchAsync(DeskFlow.Infrastructure.History.ArchiveBatch batch)
+    {
+        var done = 0;
+        foreach (var record in batch.Records)
+        {
+            if (await UndoAsync(record))
+            {
+                done++;
+            }
+        }
+
+        return done;
+    }
+
     /// <summary>可撤销的归档记录（归档文件还在的），按时间倒序。</summary>
     public IReadOnlyList<FileRecord> GetUndoableRecords(string? keyword = null)
     {
@@ -883,6 +930,8 @@ public sealed class PanelViewModel : ObservableObject
                 Source = FileSource.Manual,
                 Category = _categories.Resolve(info.Name).Name,
             };
+
+            record.BatchId = NextBatchId(record.Category);
 
             var outcome = await _archiver.ArchiveAsync(record, new ArchiveOptions
             {

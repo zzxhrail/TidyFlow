@@ -40,6 +40,9 @@ public sealed class FileRecord
 
     public string? Hash { get; set; }
 
+    /// <summary>同一次批量归档的标记：短时间内、同一类别连续归档的文件共用一个批次。</summary>
+    public string? BatchId { get; set; }
+
     /// <summary>撤销归档后文件实际落回的位置（原位置被占用时会改名）。</summary>
     public string? RestoredPath { get; set; }
 

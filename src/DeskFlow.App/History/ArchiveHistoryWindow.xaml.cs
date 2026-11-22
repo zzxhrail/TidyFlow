@@ -19,6 +19,7 @@ public partial class ArchiveHistoryWindow : Window
         InitializeComponent();
         SourceInitialized += (_, _) => WindowEffects.Apply(this, BackdropKind.None);
         _viewModel = viewModel;
+        RecordList.MouseRightButtonUp += RecordList_RightClick;
         Reload();
     }
 
@@ -36,6 +37,12 @@ public partial class ArchiveHistoryWindow : Window
             Path.GetDirectoryName(record.SourcePath) ?? record.SourcePath)).ToList();
 
         RecordList.ItemsSource = _rows;
+
+        // 整批撤销：列出"同类别 + 15 秒内"的归档批次
+        var selectedBatch = BatchBox?.SelectedItem as DeskFlow.Infrastructure.History.ArchiveBatch;
+        var batches = _viewModel.GetUndoableBatches();
+        BatchBox.ItemsSource = batches;
+        BatchBox.SelectedItem = batches.FirstOrDefault(b => b.Key == selectedBatch?.Key) ?? batches.FirstOrDefault();
         SummaryText.Text = _rows.Count == 0
             ? "没有可撤销的归档记录"
             : $"共 {_rows.Count} 条可撤销记录，选中后点「撤销归档」把文件放回原位置";
@@ -81,6 +88,32 @@ public partial class ArchiveHistoryWindow : Window
         Reload();
     }
 
+    /// <summary>撤销整批：把选中批次里的文件全部放回原位置。</summary>
+    private async void UndoBatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (BatchBox.SelectedItem is not DeskFlow.Infrastructure.History.ArchiveBatch batch)
+        {
+            StatusText.Text = "没有可撤销的批次";
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"确定撤销这一批吗？\n\n{batch.Display}\n\n这 {batch.Count} 个文件会从归档目录搬回各自的原位置。",
+            "整批撤销",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question,
+            MessageBoxResult.OK);
+
+        if (confirm != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        var done = await _viewModel.UndoBatchAsync(batch);
+        StatusText.Text = $"已撤销 {done}/{batch.Count} 个文件";
+        Reload();
+    }
+
     private void Open_Click(object sender, RoutedEventArgs e)
     {
         if (RecordList.SelectedItem is Row row)
@@ -95,6 +128,52 @@ public partial class ArchiveHistoryWindow : Window
         {
             ShellLauncher.RevealInExplorer(row.Record.ArchivedPath);
         }
+    }
+
+    /// <summary>右键某一行：撤销单个 / 撤销这一批 / 打开 / 定位。</summary>
+    private void RecordList_RightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (RecordList.SelectedItem is not Row row)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu();
+        menu.Items.Add(NewMenuItem("打开", () => ShellLauncher.Open(row.Record.ArchivedPath)));
+        menu.Items.Add(NewMenuItem("在资源管理器中显示", () => ShellLauncher.RevealInExplorer(row.Record.ArchivedPath)));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(NewMenuItem("撤销这条", async () =>
+        {
+            if (await _viewModel.UndoAsync(row.Record))
+            {
+                StatusText.Text = $"已撤销 {row.Record.FileName}";
+                Reload();
+            }
+        }));
+
+        // 同一批次的全部文件
+        var batch = _viewModel.GetUndoableBatches()
+            .FirstOrDefault(b => b.Records.Any(r => r.Id == row.Record.Id));
+        if (batch is { Count: > 1 })
+        {
+            menu.Items.Add(NewMenuItem($"撤销这一批（{batch.Count} 个）", async () =>
+            {
+                var done = await _viewModel.UndoBatchAsync(batch);
+                StatusText.Text = $"已撤销 {done}/{batch.Count} 个文件";
+                Reload();
+            }));
+        }
+
+        menu.PlacementTarget = RecordList;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private static MenuItem NewMenuItem(string header, Action action)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += (_, _) => action();
+        return item;
     }
 
     /// <summary>列表行：只暴露界面需要的字段，原始 FileRecord 留着给撤销用。</summary>

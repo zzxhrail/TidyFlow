@@ -13,6 +13,7 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -30,7 +31,19 @@
             </StackPanel>
         </DockPanel>
 
-        <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="6">
+        <!-- 整批撤销 -->
+        <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="10,8" Margin="0,0,0,10">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="整批撤销" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,10,0" />
+                <Button DockPanel.Dock="Right" Content="撤销整批" Click="UndoBatch_Click"
+                        Style="{StaticResource DangerButton}" Margin="10,0,0,0" />
+                <ComboBox x:Name="BatchBox" Height="30" VerticalContentAlignment="Center" DisplayMemberPath="Display"
+                          ToolTip="同一类别、15 秒内连续归档的文件算一批" />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource GlassCard}" Padding="6">
             <ListView x:Name="RecordList" SelectionMode="Extended" Background="Transparent"
                       BorderThickness="0" Foreground="{StaticResource TextPrimaryBrush}">
                 <ListView.ItemContainerStyle>
@@ -50,7 +63,7 @@
             </ListView>
         </Border>
 
-        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+        <DockPanel Grid.Row="3" Margin="0,12,0,0">
             <TextBlock x:Name="StatusText" DockPanel.Dock="Left" Style="{StaticResource Caption}" VerticalAlignment="Center" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="打开" Click="Open_Click" Margin="0,0,8,0" />
