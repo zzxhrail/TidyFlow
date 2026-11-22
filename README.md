@@ -746,3 +746,22 @@ System.InvalidOperationException: Transform is not valid for Window.
 实现上先按扩展名分流（`ShortcutKinds.IsShortcut`），快捷方式走 `ShortcutRegistry.Add`（去重、写 `panel.shortcuts`），其余文件走 `ImportDroppedAsync`。
 
 > 调试钩子：设置环境变量 `DESKFLOW_AUTODROP="路径1|路径2"` 后启动，面板会按同一套分流规则处理这些路径，用于回归验证。
+
+
+## 二级菜单的「新建 / 删除」（0.9.8）
+
+![分类工具条](docs/screenshot-category-toolbar.png)
+
+进「分类」后，左栏顶部多了三个按钮：
+
+| 按钮 | 作用 |
+| --- | --- |
+| ← | 返回一级导航 |
+| 🗑 | **删除选中的分类**（支持 Ctrl / Shift 多选） |
+| ＋ | 新建分类（和右键「新建分类…」同一个入口） |
+
+细节：
+
+- 列表开了 `SelectionMode=Extended`，Ctrl 点选、Shift 连选都行；**选中 2 个以上时不会自动跳进某个分类**，方便批量操作；
+- 删除只移除分类规则，**磁盘上已归档的文件保持原样**；内置分类（办公文档/表格/代码/图片…）会自动跳过并在结果里说明；
+- 选中多项时工具条会显示「已选 N」。

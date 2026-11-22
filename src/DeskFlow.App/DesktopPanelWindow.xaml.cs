@@ -956,8 +956,76 @@ public partial class DesktopPanelWindow : Window
         NavList.SelectedItem = null;
     }
 
+    /// <summary>二级菜单「+」：新建分类（和右键菜单同一个入口）。</summary>
+    private void CategoryAdd_Click(object sender, RoutedEventArgs e) => NewCategory();
+
+    /// <summary>二级菜单「删除」：删除选中的分类（Ctrl/Shift 可多选；内置分类跳过）。</summary>
+    private void CategoryDelete_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = CategoryNav.SelectedItems
+            .OfType<PanelViewModel.NavEntry>()
+            .Where(static entry => entry.Kind == "category")
+            .ToList();
+
+        if (selected.Count == 0)
+        {
+            MessageBox.Show(this, "先在列表里选中要删除的分类（Ctrl / Shift 可多选）。", "删除分类",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            "删除选中的 " + selected.Count + " 个分类？\n\n只删除分类规则，磁盘上已归档的文件不会动；内置分类会自动跳过。",
+            "删除分类", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var removed = 0;
+        var skipped = 0;
+        foreach (var entry in selected)
+        {
+            if (_viewModel.RemoveCategory(entry.Title, out _))
+            {
+                removed++;
+            }
+            else
+            {
+                skipped++;
+            }
+        }
+
+        UpdateCategorySelectionHint();
+        AnimateContent();
+
+        var extra = skipped > 0 ? "，" + skipped + " 个内置分类未删除" : string.Empty;
+        MessageBox.Show(this, "已删除 " + removed + " 个分类规则" + extra + "。\n\n磁盘上的归档文件保持原样。",
+            "删除分类", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void UpdateCategorySelectionHint()
+    {
+        if (CategorySelectionHint is null)
+        {
+            return;
+        }
+
+        var count = CategoryNav?.SelectedItems?.Count ?? 0;
+        CategorySelectionHint.Text = count > 1 ? "已选 " + count : string.Empty;
+        if (CategoryDeleteButton is not null)
+        {
+            CategoryDeleteButton.IsEnabled = count > 0;
+        }
+    }
+
     private void CategoryNav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (CategoryNav.SelectedItems.Count > 1)
+        {
+            return;   // 多选是在准备批量删除，不跳进某个分类
+        }
+
         if (CategoryNav.SelectedItem is PanelViewModel.NavEntry { Kind: "category" } entry)
         {
             _viewModel.OpenCategory(entry.Key, entry.Title);

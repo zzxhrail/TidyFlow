@@ -191,12 +191,19 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <Button Grid.Row="0" Style="{StaticResource IconButton}" Content="&#xE72B;"
-                                        HorizontalAlignment="Left" Margin="4,0,0,4" ToolTip="返回"
-                                        Click="NavBack_Click" />
+                                <DockPanel Grid.Row="0" Margin="2,0,2,6">
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE72B;" ToolTip="返回"
+                                            DockPanel.Dock="Left" Click="NavBack_Click" />
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE710;" ToolTip="新建分类"
+                                            DockPanel.Dock="Right" Margin="0,0,0,0" Click="CategoryAdd_Click" x:Name="CategoryAddButton" />
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="删除选中分类（Ctrl/Shift 可多选）"
+                                            DockPanel.Dock="Right" Click="CategoryDelete_Click" x:Name="CategoryDeleteButton" />
+                                    <TextBlock x:Name="CategorySelectionHint" Style="{StaticResource Muted}"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0" />
+                                </DockPanel>
                                 <ListBox x:Name="CategoryNav" Grid.Row="1" Width="128" Background="Transparent"
                                          BorderThickness="0" ItemsSource="{Binding CategoryNav}" PreviewMouseRightButtonDown="CategoryNav_RightClick"
-                                         SelectionChanged="CategoryNav_SelectionChanged">
+                                         SelectionChanged="CategoryNav_SelectionChanged" SelectionMode="Extended">
                                     <ListBox.ItemContainerStyle>
                                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                                             <Setter Property="Padding" Value="8,7" />
