@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="DeskFlow 面板" Width="376" Height="640" MinWidth="280" MinHeight="180"
+        Title="DeskFlow 面板" Width="420" Height="760" MinWidth="320" MinHeight="380"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="True" Topmost="False"
         Background="#FF202020" AllowDrop="True" DragOver="Panel_DragOver" DragLeave="Panel_DragLeave" Drop="Panel_Drop"
         FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" TextOptions.TextFormattingMode="Display">
@@ -49,210 +49,230 @@
         </Border.Effect>
 
         <Grid>
-            <ScrollViewer x:Name="BodyScroller" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled" Padding="0" Margin="0,2,0,0">
-                <StackPanel Margin="16,14,16,16">
+            <!-- 面板主体：固定高度分区，导航列随窗口高度伸展 -->
+            <Grid x:Name="BodyScroller" Margin="16,14,16,16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" MinHeight="220" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                    <!-- 标题栏 -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                <!-- 标题栏 -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6" Background="{StaticResource AccentBrush}"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="D" Foreground="#FF000000" FontSize="15" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
+                    <Border Grid.Column="0" Width="28" Height="28" CornerRadius="6" Background="{StaticResource AccentBrush}"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="D" Foreground="#FF000000" FontSize="15" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
 
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="DeskFlow" Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
-                        </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="DeskFlow" Foreground="{StaticResource TextPrimaryBrush}"
+                                   FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                    </StackPanel>
 
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
-                            <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
-                                    ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
-                            <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 文件盘点）" Click="OpenMoreMenu_Click" />
-                            <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />
-                            <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="收起到托盘（程序继续运行）" Click="Exit_Click" />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button x:Name="PinButton" Style="{StaticResource IconButton}" Content="&#xE718;"
+                                ToolTip="顶住：点一下锁住位置，再点解除" Click="TogglePin_Click" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="更多（归档记录 / 设置 / 文件盘点）" Click="OpenMoreMenu_Click" />
+                        <Button x:Name="CollapseButton" Style="{StaticResource IconButton}" Content="&#xE921;" ToolTip="收起/展开" Click="ToggleCollapse_Click" />
+                        <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="收起到托盘（程序继续运行）" Click="Exit_Click" />
+                    </StackPanel>
+                </Grid>
 
-                    <StackPanel x:Name="Body">
+                <!-- 来源开关 -->
+                <Border Grid.Row="1" CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
+                        Padding="14,12" Margin="0,16,0,0">
+                    <ItemsControl ItemsSource="{Binding Sources}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding AutoDownload, Mode=TwoWay}" Click="AutoDownload_Click"
+                                          Margin="0,3,14,3" IsEnabled="{Binding IsAvailable}"
+                                          ToolTip="勾选 = 发现即自动下载并归档；不勾 = 只进待接收列表">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" FontSize="11.5" />
+                                        <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextTertiaryBrush}"
+                                                   FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
 
-                        <!-- 来源开关 -->
-                        <Border CornerRadius="8" Background="#0DFFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
-                                Padding="14,12" Margin="0,16,0,0">
-                            <ItemsControl ItemsSource="{Binding Sources}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
+                <!-- 待接收 -->
+                <StackPanel Grid.Row="2" Margin="0,14,0,0"
+                            Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="待接收" Style="{StaticResource SectionHeader}"
+                               Foreground="{StaticResource WarningBrush}" Margin="2,0,0,8" />
+                    <ItemsControl ItemsSource="{Binding PendingFiles}" ItemTemplate="{StaticResource TileTemplate}"
+                                  ItemsPanel="{StaticResource TilePanel}" />
+                </StackPanel>
+
+                <!-- 导航 + 内容 -->
+                <Grid Grid.Row="3" Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" CornerRadius="8" Background="#08FFFFFF"
+                            BorderBrush="#10FFFFFF" BorderThickness="1" Padding="5,8" VerticalAlignment="Stretch">
+                        <Grid>
+                            <!-- 一级 -->
+                            <ListBox x:Name="NavList" Width="128" Background="Transparent" BorderThickness="0"
+                                     ItemsSource="{Binding RootNav}" SelectionChanged="Nav_SelectionChanged"
+                                     Visibility="{Binding IsNavRoot, Converter={StaticResource BoolToVisibility}}">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="Padding" Value="8,7" />
+                                        <Setter Property="Margin" Value="0" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox IsChecked="{Binding AutoDownload, Mode=TwoWay}" Click="AutoDownload_Click"
-                                                  Margin="0,3,14,3" IsEnabled="{Binding IsAvailable}"
-                                                  ToolTip="勾选 = 发现即自动下载并归档；不勾 = 只进待接收列表">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" FontSize="11.5" />
-                                                <TextBlock Text="{Binding Detail}" Foreground="{StaticResource TextTertiaryBrush}"
-                                                           FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </CheckBox>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
+                                                       FontSize="12.5" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Badge}" FontFamily="Segoe MDL2 Assets"
+                                                       FontSize="10" Foreground="{StaticResource TextTertiaryBrush}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
                                     </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Border>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
-                        <!-- 待接收 -->
-                        <StackPanel Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="待接收" Style="{StaticResource SectionHeader}"
-                                       Foreground="{StaticResource WarningBrush}" />
-                            <ItemsControl ItemsSource="{Binding PendingFiles}" ItemTemplate="{StaticResource TileTemplate}"
-                                          ItemsPanel="{StaticResource TilePanel}" />
-                        </StackPanel>
-
-                        <!-- 一级 / 二级导航：应用与快捷方式、最近归档在顶层，分类是「分类」下的二级 -->
-                        <Grid Margin="0,16,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" CornerRadius="8" Background="#08FFFFFF"
-                                    BorderBrush="#10FFFFFF" BorderThickness="1" Padding="5,8" VerticalAlignment="Top">
-                                <ListBox x:Name="NavList" Width="128" Background="Transparent" BorderThickness="0"
-                                         ItemsSource="{Binding NavEntries}" SelectionChanged="Nav_SelectionChanged">
+                            <!-- 二级（分类列表） -->
+                            <Grid Visibility="{Binding IsNavCategories, Converter={StaticResource BoolToVisibility}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Button Grid.Row="0" Style="{StaticResource IconButton}" Content="&#xE72B;"
+                                        HorizontalAlignment="Left" Margin="4,0,0,4" ToolTip="返回"
+                                        Click="NavBack_Click" />
+                                <ListBox x:Name="CategoryNav" Grid.Row="1" Width="128" Background="Transparent"
+                                         BorderThickness="0" ItemsSource="{Binding CategoryNav}"
+                                         SelectionChanged="CategoryNav_SelectionChanged">
                                     <ListBox.ItemContainerStyle>
                                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                                            <Setter Property="Padding" Value="8,6" />
+                                            <Setter Property="Padding" Value="8,7" />
                                             <Setter Property="Margin" Value="0" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                                                    <Setter Property="IsHitTestVisible" Value="False" />
-                                                    <Setter Property="Focusable" Value="False" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
                                         </Style>
                                     </ListBox.ItemContainerStyle>
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="{Binding Margin}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Glyph}" FontFamily="Segoe MDL2 Assets"
-                                                           FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
-                                                           FontSize="12.5" TextTrimming="CharacterEllipsis">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
-                                                                    <Setter Property="FontSize" Value="11" />
-                                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
+                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                                                       FontSize="12.5" TextTrimming="CharacterEllipsis" />
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                            </Border>
-
-                            <ScrollViewer Grid.Column="1" Margin="12,0,0,0" VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel>
-                                    <!-- 应用与快捷方式 -->
-                                    <StackPanel Visibility="{Binding IsShortcutsSection, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="应用与快捷方式" Style="{StaticResource H2}" Margin="2,0,0,10" />
-                                        <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}"
-                                                      ItemsPanel="{StaticResource TilePanel}" />
-                                    </StackPanel>
-
-                                    <!-- 最近归档 -->
-                                    <StackPanel Visibility="{Binding IsRecentSection, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="最近归档" Style="{StaticResource H2}" Margin="2,0,0,10" />
-                                        <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}"
-                                                      ItemsPanel="{StaticResource TilePanel}" />
-                                        <TextBlock Text="还没有归档记录，等文件进来或打开上面的开关" Style="{StaticResource Muted}"
-                                                   Margin="2,4,0,0"
-                                                   Visibility="{Binding HasRecent, Converter={StaticResource InverseBoolToVisibility}}" />
-                                        <TextBlock Text="把文件拖到左侧分类上即可收录；按住 Shift 拖 = 移动，直接拖 = 复制"
-                                                   Style="{StaticResource Muted}" Margin="2,10,0,0" TextWrapping="Wrap" />
-                                    </StackPanel>
-
-                                    <!-- 分类详情 -->
-                                    <StackPanel Visibility="{Binding IsCategorySection, Converter={StaticResource BoolToVisibility}}">
-                                        <Grid Margin="2,0,0,10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding BrowseTitle}" Style="{StaticResource H2}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding BrowseSubtitle}" Style="{StaticResource Muted}"
-                                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8B7;"
-                                                    ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
-                                        </Grid>
-
-                                        <ItemsControl ItemsSource="{Binding BrowseItems}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Background="#0AFFFFFF" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
-                                                            MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
-                                                            Tag="{Binding}" Cursor="Hand">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Style.Triggers>
-                                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter Property="Background" Value="#17FFFFFF" />
-                                                                    </Trigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <Image Grid.Column="0" Source="{Binding Icon}" Width="20" Height="20" VerticalAlignment="Center" />
-                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding Name}" FontSize="12.5" TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding TimeText}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
-                                                            </StackPanel>
-                                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
-                                                                       Style="{StaticResource Muted}" Margin="8,0,0,0" />
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </StackPanel>
-                            </ScrollViewer>
+                            </Grid>
                         </Grid>
+                    </Border>
 
-                        <Border CornerRadius="8" Background="#0AFFFFFF" Padding="14,10" Margin="0,14,0,0">
-                            <TextBlock Text="{Binding LogText}" Style="{StaticResource Muted}" TextWrapping="Wrap" />
-                        </Border>
-                    </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
+                    <ScrollViewer Grid.Column="1" Margin="12,0,0,0" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <!-- 应用与快捷方式 -->
+                            <StackPanel Visibility="{Binding IsShortcutsSection, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="应用与快捷方式" Style="{StaticResource H2}" Margin="2,0,0,10" />
+                                <ItemsControl ItemsSource="{Binding Shortcuts}" ItemTemplate="{StaticResource TileTemplate}"
+                                              ItemsPanel="{StaticResource TilePanel}" />
+                            </StackPanel>
+
+                            <!-- 最近归档 -->
+                            <StackPanel Visibility="{Binding IsRecentSection, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="最近归档" Style="{StaticResource H2}" Margin="2,0,0,10" />
+                                <ItemsControl ItemsSource="{Binding RecentFiles}" ItemTemplate="{StaticResource TileTemplate}"
+                                              ItemsPanel="{StaticResource TilePanel}" />
+                                <TextBlock Text="还没有归档记录，等文件进来或打开上面的开关" Style="{StaticResource Muted}"
+                                           Margin="2,4,0,0"
+                                           Visibility="{Binding HasRecent, Converter={StaticResource InverseBoolToVisibility}}" />
+                                <TextBlock Text="把文件拖到左侧分类上即可收录；按住 Shift 拖 = 移动，直接拖 = 复制"
+                                           Style="{StaticResource Muted}" Margin="2,10,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <!-- 分类详情 -->
+                            <StackPanel Visibility="{Binding IsCategorySection, Converter={StaticResource BoolToVisibility}}">
+                                <Grid Margin="2,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BrowseTitle}" Style="{StaticResource H2}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding BrowseSubtitle}" Style="{StaticResource Muted}"
+                                                   Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8B7;"
+                                            ToolTip="在资源管理器中打开" Click="BrowseOpenFolder_Click" />
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding BrowseItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#0AFFFFFF" CornerRadius="4" Padding="10,8" Margin="0,0,0,4"
+                                                    MouseLeftButtonUp="BrowseItem_Click" MouseRightButtonUp="BrowseItem_RightClick"
+                                                    Tag="{Binding}" Cursor="Hand">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#17FFFFFF" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="20" Height="20" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" FontSize="12.5" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding TimeText}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
+                                                               Style="{StaticResource Muted}" Margin="8,0,0,0" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <Border Grid.Row="4" CornerRadius="8" Background="#0AFFFFFF" Padding="14,10" Margin="0,14,0,0">
+                    <TextBlock Text="{Binding LogText}" Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                </Border>
+            </Grid>
 
             <!-- 右下角缩放提示 -->
             <Path Data="M0,12 L12,0 M0,6 L6,0" Stroke="#4DFFFFFF" StrokeThickness="1.4"

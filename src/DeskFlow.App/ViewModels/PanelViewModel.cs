@@ -204,7 +204,7 @@ public sealed class PanelViewModel : ObservableObject
     }
 
     /// <summary>左侧导航的一条（分组标题或可点击条目）。</summary>
-    public sealed record NavEntry(string Title, string Glyph, string Kind, string Key, bool IsHeader = false, double Indent = 0)
+    public sealed record NavEntry(string Title, string Glyph, string Kind, string Key, bool IsHeader = false, double Indent = 0, string Badge = "")
     {
         /// <summary>二级条目缩进（Thickness 不能直接绑定 double）。</summary>
         public Thickness Margin => new(Indent, 0, 0, 0);
@@ -235,7 +235,32 @@ public sealed class PanelViewModel : ObservableObject
 
     public bool IsCategorySection => _section == "category";
 
-    public List<NavEntry> NavEntries { get; } = new();
+    /// <summary>一级导航：应用与快捷方式 / 最近归档 / 分类。</summary>
+    public List<NavEntry> RootNav { get; } = new();
+
+    /// <summary>二级导航：某个一级项（目前是「分类」）下面的条目。</summary>
+    public List<NavEntry> CategoryNav { get; } = new();
+
+    private bool _navInCategories;
+
+    /// <summary>导航是否停在二级（分类列表）。</summary>
+    public bool IsNavCategories
+    {
+        get => _navInCategories;
+        private set
+        {
+            if (SetProperty(ref _navInCategories, value))
+            {
+                OnPropertyChanged(nameof(IsNavRoot));
+            }
+        }
+    }
+
+    public bool IsNavRoot => !_navInCategories;
+
+    public void OpenCategoryNav() => IsNavCategories = true;
+
+    public void BackToRootNav() => IsNavCategories = false;
 
     public void SelectShortcuts() => Section = "shortcuts";
 
@@ -531,17 +556,19 @@ public sealed class PanelViewModel : ObservableObject
     /// <summary>重建左侧导航：一级为「应用与快捷方式 / 最近归档」，分类作为二级。</summary>
     public void RebuildNav()
     {
-        NavEntries.Clear();
-        NavEntries.Add(new NavEntry("应用与快捷方式", "\uE71D", "section", "shortcuts"));
-        NavEntries.Add(new NavEntry("最近归档", "\uE81C", "section", "recent"));
-        NavEntries.Add(new NavEntry("分类", string.Empty, "header", string.Empty, IsHeader: true));
+        RootNav.Clear();
+        RootNav.Add(new NavEntry("应用与快捷方式", "\uE71D", "section", "shortcuts"));
+        RootNav.Add(new NavEntry("最近归档", "\uE81C", "section", "recent"));
+        RootNav.Add(new NavEntry("分类", "\uE8B7", "group", "categories", Badge: "\uE76C"));
 
+        CategoryNav.Clear();
         foreach (var category in Categories)
         {
-            NavEntries.Add(new NavEntry(category.Title, string.Empty, "category", category.Path ?? string.Empty, Indent: 14));
+            CategoryNav.Add(new NavEntry(category.Title, string.Empty, "category", category.Path ?? string.Empty));
         }
 
-        OnPropertyChanged(nameof(NavEntries));
+        OnPropertyChanged(nameof(RootNav));
+        OnPropertyChanged(nameof(CategoryNav));
     }
 
     public void RefreshAll()

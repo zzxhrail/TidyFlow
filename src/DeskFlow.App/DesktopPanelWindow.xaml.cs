@@ -131,7 +131,7 @@ public partial class DesktopPanelWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var area = SystemParameters.WorkArea;
-        _maxPanelHeight = Math.Max(260, area.Height - 24);
+        _maxPanelHeight = Math.Max(320, area.Height - 24);
         MaxHeight = _maxPanelHeight;
         MaxWidth = Math.Max(320, area.Width - 24);
 
@@ -269,7 +269,7 @@ public partial class DesktopPanelWindow : Window
     private void ToggleCollapse_Click(object sender, RoutedEventArgs e)
     {
         _collapsed = !_collapsed;
-        Body.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
+        BodyScroller.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
         CollapseButton.Content = _collapsed ? "\uE922" : "\uE921";
 
         if (_collapsed)
@@ -365,6 +365,21 @@ public partial class DesktopPanelWindow : Window
 
     private void BrowseBack_Click(object sender, RoutedEventArgs e) => _viewModel.CloseBrowse();
 
+    private void NavBack_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.BackToRootNav();
+        _viewModel.SelectShortcuts();
+        NavList.SelectedItem = null;
+    }
+
+    private void CategoryNav_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CategoryNav.SelectedItem is PanelViewModel.NavEntry { Kind: "category" } entry)
+        {
+            _viewModel.OpenCategory(entry.Key, entry.Title);
+        }
+    }
+
     /// <summary>左侧导航：点一级切分区，点二级（分类）进该分类的文件列表。</summary>
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -380,6 +395,11 @@ public partial class DesktopPanelWindow : Window
                 break;
             case "section" when entry.Key == "recent":
                 _viewModel.SelectRecent();
+                break;
+            case "group" when entry.Key == "categories":
+                // 「分类」点了不是展开，而是进二级页
+                _viewModel.OpenCategoryNav();
+                CategoryNav.SelectedItem = null;
                 break;
             case "category":
                 _viewModel.OpenCategory(entry.Key, entry.Title);
